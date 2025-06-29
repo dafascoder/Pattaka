@@ -1,4 +1,4 @@
-# Voltig
+# Recon
 
 A full-stack application combining **Better Auth** with a **Go backend** and **TanStack Start frontend**.
 
