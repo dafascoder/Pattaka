@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { register as registerUser, fetchMe } from '@/lib/auth-client'
+import { register as registerUser } from '@/lib/auth-client'
 import { Lightbulb } from 'lucide-react'
 import { RegisterForm } from '@/components/auth/register-form'
 import { toast } from 'sonner'
-import { Loader } from '@/components/loader'
 
 export const Route = createFileRoute('/(auth)/register')({
   component: SignupPage,
@@ -13,40 +12,8 @@ export const Route = createFileRoute('/(auth)/register')({
 function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const [isChecking, setIsChecking] = useState(true)
-  const [session, setSession] = useState<any>(null)
 
-  useEffect(() => {
-    // Redirect to dashboard if already authenticated
-    if (!isChecking && session?.user) {
-      console.log('User already authenticated, redirecting to dashboard')
-      navigate({ to: '/dashboard' })
-    }
-  }, [session, isChecking, navigate])
 
-  useEffect(() => {
-    fetchMe()
-      .then((s) => setSession(s))
-      .finally(() => setIsChecking(false))
-  }, [])
-
-  // Show loading while checking auth status
-  if (isChecking) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader />
-      </div>
-    )
-  }
-
-  // If user is authenticated, show loading while redirecting
-  if (session?.user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader />
-      </div>
-    )
-  }
 
   const handleRegister = async (email: string, name: string, password: string) => {
     setIsLoading(true)

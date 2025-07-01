@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Activity, Users, Workflow, Zap, RefreshCw } from 'lucide-react';
-import { useAgents } from '@/hooks/queries/useAgent';
+import { useAgents } from '@/hooks/useAgent';
 import { Agent } from '@/types/api';
 
 

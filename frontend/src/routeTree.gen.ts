@@ -21,7 +21,6 @@ import { Route as authenticatedDashboardLayoutWorkflowsRouteImport } from './rou
 import { Route as authenticatedDashboardLayoutIntegrationsRouteImport } from './routes/(authenticated)/dashboard/_layout.integrations'
 import { Route as authenticatedDashboardLayoutExecutionsRouteImport } from './routes/(authenticated)/dashboard/_layout.executions'
 import { Route as authenticatedDashboardLayoutBuilderRouteImport } from './routes/(authenticated)/dashboard/_layout.builder'
-import { Route as authenticatedDashboardLayoutAgentsRouteImport } from './routes/(authenticated)/dashboard/_layout.agents'
 
 const authenticatedDashboardRouteImport = createFileRoute(
   '/(authenticated)/dashboard',
@@ -87,12 +86,6 @@ const authenticatedDashboardLayoutBuilderRoute =
     path: '/builder',
     getParentRoute: () => authenticatedDashboardLayoutRoute,
   } as any)
-const authenticatedDashboardLayoutAgentsRoute =
-  authenticatedDashboardLayoutAgentsRouteImport.update({
-    id: '/agents',
-    path: '/agents',
-    getParentRoute: () => authenticatedDashboardLayoutRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
@@ -100,7 +93,6 @@ export interface FileRoutesByFullPath {
   '/builder': typeof authenticatedBuilderRoute
   '/': typeof landingIndexRoute
   '/dashboard': typeof authenticatedDashboardLayoutRouteWithChildren
-  '/dashboard/agents': typeof authenticatedDashboardLayoutAgentsRoute
   '/dashboard/builder': typeof authenticatedDashboardLayoutBuilderRoute
   '/dashboard/executions': typeof authenticatedDashboardLayoutExecutionsRoute
   '/dashboard/integrations': typeof authenticatedDashboardLayoutIntegrationsRoute
@@ -113,7 +105,6 @@ export interface FileRoutesByTo {
   '/builder': typeof authenticatedBuilderRoute
   '/': typeof landingIndexRoute
   '/dashboard': typeof authenticatedDashboardLayoutIndexRoute
-  '/dashboard/agents': typeof authenticatedDashboardLayoutAgentsRoute
   '/dashboard/builder': typeof authenticatedDashboardLayoutBuilderRoute
   '/dashboard/executions': typeof authenticatedDashboardLayoutExecutionsRoute
   '/dashboard/integrations': typeof authenticatedDashboardLayoutIntegrationsRoute
@@ -127,7 +118,6 @@ export interface FileRoutesById {
   '/(landing)/': typeof landingIndexRoute
   '/(authenticated)/dashboard': typeof authenticatedDashboardRouteWithChildren
   '/(authenticated)/dashboard/_layout': typeof authenticatedDashboardLayoutRouteWithChildren
-  '/(authenticated)/dashboard/_layout/agents': typeof authenticatedDashboardLayoutAgentsRoute
   '/(authenticated)/dashboard/_layout/builder': typeof authenticatedDashboardLayoutBuilderRoute
   '/(authenticated)/dashboard/_layout/executions': typeof authenticatedDashboardLayoutExecutionsRoute
   '/(authenticated)/dashboard/_layout/integrations': typeof authenticatedDashboardLayoutIntegrationsRoute
@@ -142,7 +132,6 @@ export interface FileRouteTypes {
     | '/builder'
     | '/'
     | '/dashboard'
-    | '/dashboard/agents'
     | '/dashboard/builder'
     | '/dashboard/executions'
     | '/dashboard/integrations'
@@ -155,7 +144,6 @@ export interface FileRouteTypes {
     | '/builder'
     | '/'
     | '/dashboard'
-    | '/dashboard/agents'
     | '/dashboard/builder'
     | '/dashboard/executions'
     | '/dashboard/integrations'
@@ -168,7 +156,6 @@ export interface FileRouteTypes {
     | '/(landing)/'
     | '/(authenticated)/dashboard'
     | '/(authenticated)/dashboard/_layout'
-    | '/(authenticated)/dashboard/_layout/agents'
     | '/(authenticated)/dashboard/_layout/builder'
     | '/(authenticated)/dashboard/_layout/executions'
     | '/(authenticated)/dashboard/_layout/integrations'
@@ -263,18 +250,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedDashboardLayoutBuilderRouteImport
       parentRoute: typeof authenticatedDashboardLayoutRoute
     }
-    '/(authenticated)/dashboard/_layout/agents': {
-      id: '/(authenticated)/dashboard/_layout/agents'
-      path: '/agents'
-      fullPath: '/dashboard/agents'
-      preLoaderRoute: typeof authenticatedDashboardLayoutAgentsRouteImport
-      parentRoute: typeof authenticatedDashboardLayoutRoute
-    }
   }
 }
 
 interface authenticatedDashboardLayoutRouteChildren {
-  authenticatedDashboardLayoutAgentsRoute: typeof authenticatedDashboardLayoutAgentsRoute
   authenticatedDashboardLayoutBuilderRoute: typeof authenticatedDashboardLayoutBuilderRoute
   authenticatedDashboardLayoutExecutionsRoute: typeof authenticatedDashboardLayoutExecutionsRoute
   authenticatedDashboardLayoutIntegrationsRoute: typeof authenticatedDashboardLayoutIntegrationsRoute
@@ -284,8 +263,6 @@ interface authenticatedDashboardLayoutRouteChildren {
 
 const authenticatedDashboardLayoutRouteChildren: authenticatedDashboardLayoutRouteChildren =
   {
-    authenticatedDashboardLayoutAgentsRoute:
-      authenticatedDashboardLayoutAgentsRoute,
     authenticatedDashboardLayoutBuilderRoute:
       authenticatedDashboardLayoutBuilderRoute,
     authenticatedDashboardLayoutExecutionsRoute:

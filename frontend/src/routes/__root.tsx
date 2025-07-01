@@ -93,7 +93,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           </div>
         
         <ReactQueryDevtools position="left" />
-        <TanStackRouterDevtools position="bottom-left" />
+        {/* <TanStackRouterDevtools position="bottom-left" /> */}
         <Scripts />
       </body>
     </html>

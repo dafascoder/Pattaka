@@ -26,18 +26,19 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { User } from "@/types/user"
 import { logout } from "@/lib/auth-client"
-import { Suspense } from "react"
-import { useCurrentUser } from "@/lib/react-query"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useUser } from "@/hooks/useUser"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
-  const { data: user, isLoading } = useCurrentUser()
+  const { getUser: userQuery } = useUser()
+
+  if (userQuery.isLoading) {
+    return <Skeleton className="h-10 w-full"  />
+  }
 
   return (
-    <Suspense fallback={<Skeleton className="h-10 w-full"  />}>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -47,13 +48,13 @@ export function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user?.user?.image ?? undefined} alt={user?.user?.name ?? ''} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarImage src={userQuery.data?.image ?? undefined} alt={userQuery.data?.name ?? ''} />
+                <AvatarFallback className="rounded-lg">{userQuery.data?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user?.user?.name}</span>
+                <span className="truncate font-medium">{userQuery.data?.name}</span>
                 <span className="text-muted-foreground truncate text-xs">
-                  {user?.user?.email}
+                  {userQuery.data?.email}
                 </span>
               </div>
               <IconDotsVertical className="ml-auto size-4" />
@@ -68,13 +69,13 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user?.user?.image ?? undefined} alt={user?.user?.name ?? ''} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarImage src={userQuery.data?.image ?? undefined} alt={userQuery.data?.name ?? ''} />
+                  <AvatarFallback className="rounded-lg">{userQuery.data?.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user?.user?.name}</span>
+                      <span className="truncate font-medium">{userQuery.data?.name}</span>
                   <span className="text-muted-foreground truncate text-xs">
-                    {user?.user?.email}
+                    {userQuery.data?.email}
                   </span>
                 </div>
               </div>
@@ -105,6 +106,5 @@ export function NavUser() {
         </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-    </Suspense>
   )
 }

@@ -15,6 +15,7 @@ RETURNING *;
 UPDATE "user"
 SET name = $2, email = $3, "emailVerified" = $4, image = $5, "updatedAt" = $6
 WHERE id = $1
+RETURNING *;
 
 -- name: DeleteUser :exec
 DELETE FROM "user" WHERE id = $1; 

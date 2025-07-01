@@ -60,7 +60,7 @@ export interface UpdateAgentRequest {
 
 export interface Workflow {
   id: string;
-  agent_id: string;
+  user_id: string;
   name: string;
   description: string;
   definition: Record<string, any>;
@@ -71,11 +71,18 @@ export interface Workflow {
 }
 
 export interface CreateWorkflowRequest {
-  agent_id: string;
   name: string;
   description?: string;
   definition: Record<string, any>;
   is_active?: boolean;
+}
+
+export interface AgentWorkflow {
+  id: string;
+  agent_id: string;
+  workflow_id: string;
+  is_primary: boolean;
+  created_at: string;
 }
 
 export interface Integration {
@@ -101,7 +108,7 @@ export interface CreateIntegrationRequest {
 export interface Execution {
   id: string;
   workflow_id: string;
-  agent_id: string;
+  agent_id?: string;
   status: string;
   input_data: Record<string, any>;
   output_data: Record<string, any>;

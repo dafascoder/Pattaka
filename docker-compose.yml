@@ -3,11 +3,11 @@ version: "3.8"
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: voltig-postgres
+    container_name: pattaka-postgres
     environment:
-      POSTGRES_DB: voltig
-      POSTGRES_USER: voltig_user
-      POSTGRES_PASSWORD: voltig_password
+      POSTGRES_DB: pattaka
+      POSTGRES_USER: pattaka_user
+      POSTGRES_PASSWORD: pattaka_password
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -16,7 +16,7 @@ services:
       - ./database/init:/docker-entrypoint-initdb.d
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U voltig_user -d voltig"]
+      test: ["CMD-SHELL", "pg_isready -U pattaka_user -d pattaka"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -45,17 +45,18 @@ CREATE TABLE IF NOT EXISTS agents (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Workflows table - stores workflow definitions
+-- Workflows table - stores workflow definitions (user-owned, independent of agents)
 CREATE TABLE IF NOT EXISTS workflows (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+    user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     definition JSONB NOT NULL DEFAULT '{}', -- Workflow steps and configuration
     version INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, name, version) -- Ensure unique workflow name+version per user
 );
 
 -- Integrations table - stores available service integrations
@@ -75,7 +76,7 @@ CREATE TABLE IF NOT EXISTS integrations (
 CREATE TABLE IF NOT EXISTS executions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workflow_id UUID REFERENCES workflows(id) ON DELETE CASCADE,
-    agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+    agent_id UUID REFERENCES agents(id) ON DELETE SET NULL, -- Optional: which agent executed this workflow
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
     input_data JSONB DEFAULT '{}',
     output_data JSONB DEFAULT '{}',
@@ -105,8 +106,10 @@ CREATE TABLE IF NOT EXISTS execution_steps (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
-CREATE INDEX IF NOT EXISTS idx_workflows_agent_id ON workflows(agent_id);
+CREATE INDEX IF NOT EXISTS idx_workflows_user_id ON workflows(user_id);
+CREATE INDEX IF NOT EXISTS idx_workflows_name ON workflows(name);
 CREATE INDEX IF NOT EXISTS idx_workflows_is_active ON workflows(is_active);
+CREATE INDEX IF NOT EXISTS idx_workflows_version ON workflows(version);
 CREATE INDEX IF NOT EXISTS idx_integrations_user_id ON integrations(user_id);
 CREATE INDEX IF NOT EXISTS idx_integrations_type ON integrations(type);
 CREATE INDEX IF NOT EXISTS idx_executions_workflow_id ON executions(workflow_id);
@@ -122,6 +125,20 @@ INSERT INTO integrations (name, type, config, user_id) VALUES
 ('Slack', 'api', '{"base_url": "https://slack.com/api", "version": "v1"}', 'system'),
 ('Discord', 'api', '{"base_url": "https://discord.com/api", "version": "v10"}', 'system')
 ON CONFLICT DO NOTHING;
+
+-- Optional: Create a junction table for agent-workflow associations if needed
+-- This allows agents to be associated with multiple workflows and vice versa
+CREATE TABLE IF NOT EXISTS agent_workflows (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+    workflow_id UUID REFERENCES workflows(id) ON DELETE CASCADE,
+    is_primary BOOLEAN DEFAULT false, -- Flag to indicate primary workflow for an agent
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(agent_id, workflow_id) -- Prevent duplicate associations
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_workflows_agent_id ON agent_workflows(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_workflows_workflow_id ON agent_workflows(workflow_id);
 
 -- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -150,6 +167,18 @@ SELECT 'up SQL query';
 -- +goose StatementEnd
 
 -- +goose Down
+DROP TABLE IF EXISTS agent_workflows CASCADE;
+DROP TABLE IF EXISTS integrations CASCADE;
+DROP TABLE IF EXISTS workflows CASCADE; 
+DROP TABLE IF EXISTS agents CASCADE;
+DROP TABLE IF EXISTS "user" CASCADE;
+DROP TABLE IF EXISTS "session" CASCADE;
+DROP TABLE IF EXISTS "verification" CASCADE;
+DROP TABLE IF EXISTS account CASCADE;
+DROP TABLE IF EXISTS "verification" CASCADE;
+DROP TABLE IF EXISTS "session" CASCADE;
+DROP TABLE IF EXISTS "execution_steps" CASCADE;
+DROP TABLE IF EXISTS "executions" CASCADE;
 -- +goose StatementBegin
 SELECT 'down SQL query';
 -- +goose StatementEnd

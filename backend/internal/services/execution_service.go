@@ -42,7 +42,6 @@ func (s *ExecutionService) CreateExecution(ctx context.Context, execution models
 
 	params := sqlcdb.CreateExecutionParams{
 		WorkflowID: pgtype.UUID{Bytes: execution.WorkflowID, Valid: true},
-		AgentID:    pgtype.UUID{Bytes: execution.AgentID, Valid: true},
 		Status:     pgtype.Text{String: execution.Status, Valid: execution.Status != ""},
 		InputData:  inputDataJSON,
 		StartedAt:  pgtype.Timestamptz{Time: execution.StartedAt, Valid: true},
@@ -199,11 +198,6 @@ func (s *ExecutionService) convertDBExecutionToModel(dbExecution sqlcdb.Executio
 		workflowID = dbExecution.WorkflowID.Bytes
 	}
 
-	var agentID uuid.UUID
-	if dbExecution.AgentID.Valid {
-		agentID = dbExecution.AgentID.Bytes
-	}
-
 	// Convert pgtype.Text to string
 	status := ""
 	if dbExecution.Status.Valid {
@@ -230,7 +224,6 @@ func (s *ExecutionService) convertDBExecutionToModel(dbExecution sqlcdb.Executio
 	return models.Execution{
 		ID:              id,
 		WorkflowID:      workflowID,
-		AgentID:         agentID,
 		Status:          status,
 		InputData:       inputData,
 		OutputData:      outputData,

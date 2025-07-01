@@ -29,9 +29,9 @@ function BuilderRedirect() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/builder">
+            <Link to="/dashboard/workflows">
               <Button className="w-full">
-                Open Builder
+                Manage Workflows
                 <IconExternalLink className="ml-2 h-4 w-4" />
               </Button>
             </Link>

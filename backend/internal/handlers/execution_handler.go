@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"backend/internal/logger"
+	"backend/internal/middleware"
 	"backend/internal/models"
 	"backend/internal/services"
 	"backend/utils"
@@ -25,9 +26,9 @@ func NewExecutionHandler(executionService *services.ExecutionService) *Execution
 
 // GetExecutions handles GET /executions
 func (h *ExecutionHandler) GetExecutions(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from context (assuming it's set by auth middleware)
-	userID := r.Context().Value("userID")
-	if userID == nil {
+	// Get user ID from auth context using the middleware helper
+	authContext, ok := middleware.GetAuthContext(r)
+	if !ok {
 		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -41,7 +42,7 @@ func (h *ExecutionHandler) GetExecutions(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	executions, err := h.executionService.GetExecutions(r.Context(), userID.(string), limit)
+	executions, err := h.executionService.GetExecutions(r.Context(), authContext.User.ID, limit)
 	if err != nil {
 		h.logger.WithError(err).Error("Failed to get executions")
 		utils.RespondWithError(w, "Failed to retrieve executions", http.StatusInternalServerError)
@@ -85,11 +86,6 @@ func (h *ExecutionHandler) CreateExecution(w http.ResponseWriter, r *http.Reques
 	// Validate required fields
 	if execution.WorkflowID == uuid.Nil {
 		utils.RespondWithError(w, "Workflow ID is required", http.StatusBadRequest)
-		return
-	}
-
-	if execution.AgentID == uuid.Nil {
-		utils.RespondWithError(w, "Agent ID is required", http.StatusBadRequest)
 		return
 	}
 

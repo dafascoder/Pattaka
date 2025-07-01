@@ -30,7 +30,7 @@ type Agent struct {
 // Workflow represents a workflow with JSON-serializable fields
 type Workflow struct {
 	ID          uuid.UUID              `json:"id"`
-	AgentID     uuid.UUID              `json:"agent_id"`
+	UserID      string                 `json:"user_id"`
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	Definition  map[string]interface{} `json:"definition"`
@@ -38,6 +38,15 @@ type Workflow struct {
 	IsActive    bool                   `json:"is_active"`
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
+}
+
+// AgentWorkflow represents the association between agents and workflows
+type AgentWorkflow struct {
+	ID         uuid.UUID `json:"id"`
+	AgentID    uuid.UUID `json:"agent_id"`
+	WorkflowID uuid.UUID `json:"workflow_id"`
+	IsPrimary  bool      `json:"is_primary"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // Integration represents an integration with JSON-serializable fields
@@ -57,7 +66,7 @@ type Integration struct {
 type Execution struct {
 	ID              uuid.UUID              `json:"id"`
 	WorkflowID      uuid.UUID              `json:"workflow_id"`
-	AgentID         uuid.UUID              `json:"agent_id"`
+	AgentID         *uuid.UUID             `json:"agent_id,omitempty"` // Optional: which agent executed this
 	Status          string                 `json:"status"`
 	InputData       map[string]interface{} `json:"input_data"`
 	OutputData      map[string]interface{} `json:"output_data"`

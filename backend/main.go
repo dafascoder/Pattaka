@@ -53,10 +53,11 @@ func main() {
 	integrationService := services.NewIntegrationService(database)
 	executionService := services.NewExecutionService(database)
 	authService := services.NewAuthService(database)
+	userService := services.NewUserService(database)
 	log.Info("Services initialized")
 
 	// Initialize router
-	router := route.NewRouter(agentService, workflowService, integrationService, executionService, authService)
+	router := route.NewRouter(agentService, userService, workflowService, integrationService, executionService, authService)
 
 	// Setup middleware chain
 	allowedOrigins := []string{

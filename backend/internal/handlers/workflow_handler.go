@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"backend/internal/logger"
+	"backend/internal/middleware"
 	"backend/internal/models"
 	"backend/internal/services"
 	"backend/utils"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -23,14 +25,14 @@ func NewWorkflowHandler(workflowService *services.WorkflowService) *WorkflowHand
 
 // GetWorkflows handles GET /workflows
 func (h *WorkflowHandler) GetWorkflows(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from context (assuming it's set by auth middleware)
-	userID := r.Context().Value("userID")
-	if userID == nil {
+	// Get user ID from auth context using the middleware helper
+	authContext, ok := middleware.GetAuthContext(r)
+	if !ok {
 		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	workflows, err := h.workflowService.GetWorkflows(r.Context(), userID.(string))
+	workflows, err := h.workflowService.GetWorkflows(r.Context(), authContext.User.ID)
 	if err != nil {
 		h.logger.WithError(err).Error("Failed to get workflows")
 		utils.RespondWithError(w, "Failed to retrieve workflows", http.StatusInternalServerError)
@@ -60,32 +62,53 @@ func (h *WorkflowHandler) GetWorkflow(w http.ResponseWriter, r *http.Request) {
 	utils.RespondWithJSON(w, workflow)
 }
 
+// CreateWorkflowRequest represents the request body for creating a workflow
+type CreateWorkflowRequest struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Definition  map[string]interface{} `json:"definition"`
+	IsActive    bool                   `json:"is_active"`
+}
+
 // CreateWorkflow handles POST /workflows
 func (h *WorkflowHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request) {
-	var workflow models.Workflow
-	if err := json.NewDecoder(r.Body).Decode(&workflow); err != nil {
+	// Get the user id from the auth context
+	authContext, ok := middleware.GetAuthContext(r)
+	if !ok {
+		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req CreateWorkflowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.WithError(err).Error("Failed to decode request body")
 		utils.RespondWithError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Generate new UUID for the workflow
-	workflow.ID = uuid.New()
-
 	// Validate required fields
-	if workflow.Name == "" {
+	if req.Name == "" {
 		utils.RespondWithError(w, "Workflow name is required", http.StatusBadRequest)
 		return
 	}
 
-	if workflow.AgentID == uuid.Nil {
-		utils.RespondWithError(w, "Agent ID is required", http.StatusBadRequest)
-		return
+	// Create workflow model from request
+	workflow := models.Workflow{
+		ID:          uuid.New(),
+		UserID:      authContext.User.ID,
+		Name:        req.Name,
+		Description: req.Description,
+		Definition:  req.Definition,
+		Version:     1, // Initial version
+		IsActive:    req.IsActive,
 	}
 
 	// Set default values
-	if workflow.Version == 0 {
-		workflow.Version = 1
+	if workflow.Definition == nil {
+		workflow.Definition = make(map[string]interface{})
 	}
+
+	log.Println("workflow", workflow)
 
 	createdWorkflow, err := h.workflowService.CreateWorkflow(r.Context(), workflow)
 	if err != nil {

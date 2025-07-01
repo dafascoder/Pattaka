@@ -2,16 +2,16 @@ import { AppSidebar } from '@/components/nav/sidebar/app-sidebar'
 import { SiteHeader } from '@/components/nav/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { getUserDetails } from '@/lib/auth-server-func'
-import { User } from '@/types/user'
+import { requireAuth } from '@/lib/auth-middleware'
 
 export const Route = createFileRoute('/(authenticated)/dashboard/_layout')({
+  beforeLoad: requireAuth,
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
-    <SidebarProvider
+  <SidebarProvider
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",

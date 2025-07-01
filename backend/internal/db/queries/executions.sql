@@ -18,8 +18,8 @@ LIMIT $2;
 SELECT e.id, e.workflow_id, e.agent_id, e.status, e.input_data, e.output_data, 
        e.error_message, e.execution_time_ms, e.started_at, e.completed_at, e.created_at 
 FROM executions e 
-JOIN agents a ON e.agent_id = a.id 
-WHERE a.user_id = $1 
+JOIN workflows w ON e.workflow_id = w.id 
+WHERE w.user_id = $1 
 ORDER BY e.started_at DESC 
 LIMIT $2;
 
@@ -42,5 +42,5 @@ WHERE id = $1
 RETURNING id, workflow_id, agent_id, status, input_data, output_data, error_message, 
           execution_time_ms, started_at, completed_at, created_at;
 
--- name: GetAgentIDByWorkflowID :one
-SELECT agent_id FROM workflows WHERE id = $1; 
+-- name: GetUserIDByWorkflowID :one
+SELECT user_id FROM workflows WHERE id = $1; 

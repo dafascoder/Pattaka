@@ -6,6 +6,9 @@ import (
 	"backend/internal/models"
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -34,13 +37,18 @@ func (s *WorkflowService) GetWorkflow(ctx context.Context, workflowID string) (m
 }
 
 func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflow models.Workflow) (models.Workflow, error) {
+	// Ensure user exists in database first
+	if err := s.ensureUserExists(ctx, workflow.UserID); err != nil {
+		return models.Workflow{}, err
+	}
+
 	definitionJSON, err := json.Marshal(workflow.Definition)
 	if err != nil {
 		return models.Workflow{}, err
 	}
 
 	params := sqlcdb.CreateWorkflowParams{
-		AgentID:     pgtype.UUID{Bytes: workflow.AgentID, Valid: true},
+		UserID:      workflow.UserID,
 		Name:        workflow.Name,
 		Description: pgtype.Text{String: workflow.Description, Valid: workflow.Description != ""},
 		Definition:  definitionJSON,
@@ -50,10 +58,44 @@ func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflow models.Wo
 
 	createdWorkflow, err := s.db.Queries().CreateWorkflow(ctx, params)
 	if err != nil {
+		// Check if it's a foreign key constraint violation for user_id
+		if strings.Contains(err.Error(), "workflows_user_id_fkey") {
+			return models.Workflow{}, errors.New("user does not exist in database - please register first")
+		}
 		return models.Workflow{}, err
 	}
 
 	return s.convertDBWorkflowToModel(createdWorkflow)
+}
+
+// ensureUserExists creates a minimal user record if it doesn't exist
+func (s *WorkflowService) ensureUserExists(ctx context.Context, userID string) error {
+	// Check if user exists
+	_, err := s.db.Queries().GetUserByID(ctx, userID)
+	if err == nil {
+		return nil // User exists
+	}
+
+	// If it's not a "not found" error, return the error
+	if !strings.Contains(err.Error(), "no rows") {
+		return err
+	}
+
+	// User doesn't exist, create a minimal user record
+	// Note: This creates a user with minimal info - in production you might want better data
+	now := time.Now()
+	params := sqlcdb.CreateUserParams{
+		ID:            userID,
+		Name:          "User",             // Default name
+		Email:         "user@example.com", // Default email - should be updated
+		EmailVerified: false,
+		Image:         pgtype.Text{Valid: false},
+		CreatedAt:     pgtype.Timestamp{Time: now, Valid: true},
+		UpdatedAt:     pgtype.Timestamp{Time: now, Valid: true},
+	}
+
+	_, err = s.db.Queries().CreateUser(ctx, params)
+	return err
 }
 
 func (s *WorkflowService) UpdateWorkflow(ctx context.Context, workflowID string, workflow models.Workflow) (models.Workflow, error) {
@@ -142,12 +184,6 @@ func (s *WorkflowService) convertDBWorkflowToModel(dbWorkflow sqlcdb.Workflow) (
 	if dbWorkflow.ID.Valid {
 		id = dbWorkflow.ID.Bytes
 	}
-
-	var agentID uuid.UUID
-	if dbWorkflow.AgentID.Valid {
-		agentID = dbWorkflow.AgentID.Bytes
-	}
-
 	// Convert pgtype.Text to string
 	description := ""
 	if dbWorkflow.Description.Valid {
@@ -168,7 +204,7 @@ func (s *WorkflowService) convertDBWorkflowToModel(dbWorkflow sqlcdb.Workflow) (
 
 	return models.Workflow{
 		ID:          id,
-		AgentID:     agentID,
+		UserID:      dbWorkflow.UserID,
 		Name:        dbWorkflow.Name,
 		Description: description,
 		Definition:  definition,

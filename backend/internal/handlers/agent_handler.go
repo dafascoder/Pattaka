@@ -91,7 +91,7 @@ func (h *AgentHandler) getAgents(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
 	// Get user ID from authentication context
-	userID := "demo-user" // Default for MVP
+	userID := ""
 	if authContext, ok := middleware.GetAuthContext(r); ok {
 		userID = authContext.User.ID
 		h.logger.WithFields(map[string]interface{}{
@@ -130,7 +130,7 @@ func (h *AgentHandler) createAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from authentication context
-	userID := "demo-user" // Default for MVP
+	userID := ""
 	if authContext, ok := middleware.GetAuthContext(r); ok {
 		userID = authContext.User.ID
 		h.logger.WithFields(map[string]interface{}{
@@ -141,7 +141,7 @@ func (h *AgentHandler) createAgent(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.logger.WithField("agent_name", agent.Name).Warn("Using demo user for agent creation")
 	}
-
+	
 	agent.UserID = userID
 
 	// Basic validation
@@ -186,9 +186,13 @@ func (h *AgentHandler) getAgent(w http.ResponseWriter, r *http.Request, agentID 
 	start := time.Now()
 
 	// Get user ID for logging
-	userID := "demo-user"
+	userID := ""
 	if authContext, ok := middleware.GetAuthContext(r); ok {
 		userID = authContext.User.ID
+	} else {
+		h.logger.Warn("No auth context found for agent creation")
+		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	agent, err := h.agentService.GetAgentByID(r.Context(), agentID)
@@ -223,9 +227,13 @@ func (h *AgentHandler) updateAgent(w http.ResponseWriter, r *http.Request, agent
 	}
 
 	// Get user ID for logging
-	userID := "demo-user"
+	userID := ""
 	if authContext, ok := middleware.GetAuthContext(r); ok {
 		userID = authContext.User.ID
+	} else {
+		h.logger.Warn("No auth context found for agent update")
+		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	updatedAgent, err := h.agentService.UpdateAgent(r.Context(), agentID, agent)
@@ -253,9 +261,13 @@ func (h *AgentHandler) deleteAgent(w http.ResponseWriter, r *http.Request, agent
 	start := time.Now()
 
 	// Get user ID for logging
-	userID := "demo-user"
+	userID := ""
 	if authContext, ok := middleware.GetAuthContext(r); ok {
 		userID = authContext.User.ID
+	} else {
+		h.logger.Warn("No auth context found for agent deletion")
+		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	err := h.agentService.DeleteAgent(r.Context(), agentID)

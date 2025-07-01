@@ -36,6 +36,14 @@ type Agent struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AgentWorkflow struct {
+	ID         pgtype.UUID        `json:"id"`
+	AgentID    pgtype.UUID        `json:"agent_id"`
+	WorkflowID pgtype.UUID        `json:"workflow_id"`
+	IsPrimary  pgtype.Bool        `json:"is_primary"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
 type Execution struct {
 	ID              pgtype.UUID        `json:"id"`
 	WorkflowID      pgtype.UUID        `json:"workflow_id"`
@@ -110,7 +118,7 @@ type Verification struct {
 
 type Workflow struct {
 	ID          pgtype.UUID        `json:"id"`
-	AgentID     pgtype.UUID        `json:"agent_id"`
+	UserID      string             `json:"user_id"`
 	Name        string             `json:"name"`
 	Description pgtype.Text        `json:"description"`
 	Definition  []byte             `json:"definition"`

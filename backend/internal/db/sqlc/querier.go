@@ -11,13 +11,19 @@ import (
 )
 
 type Querier interface {
+	ActivateWorkflowVersion(ctx context.Context, arg ActivateWorkflowVersionParams) error
+	// Agent-Workflow Association queries
+	AssociateAgentWithWorkflow(ctx context.Context, arg AssociateAgentWithWorkflowParams) (AgentWorkflow, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateExecution(ctx context.Context, arg CreateExecutionParams) (Execution, error)
 	CreateIntegration(ctx context.Context, arg CreateIntegrationParams) (CreateIntegrationRow, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWorkflow(ctx context.Context, arg CreateWorkflowParams) (Workflow, error)
+	CreateWorkflowVersion(ctx context.Context, arg CreateWorkflowVersionParams) (Workflow, error)
+	DeactivateWorkflowVersions(ctx context.Context, arg DeactivateWorkflowVersionsParams) error
 	DeleteAgent(ctx context.Context, id pgtype.UUID) error
+	DeleteAllWorkflowVersions(ctx context.Context, arg DeleteAllWorkflowVersionsParams) error
 	DeleteIntegration(ctx context.Context, id pgtype.UUID) error
 	DeleteSession(ctx context.Context, token string) error
 	DeleteUser(ctx context.Context, id string) error
@@ -25,7 +31,7 @@ type Querier interface {
 	GetAccountByID(ctx context.Context, id string) (Account, error)
 	GetAccountByUserID(ctx context.Context, userID string) (Account, error)
 	GetAgentByID(ctx context.Context, id pgtype.UUID) (Agent, error)
-	GetAgentIDByWorkflowID(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error)
+	GetAgentWorkflowAssociations(ctx context.Context, agentID pgtype.UUID) ([]AgentWorkflow, error)
 	GetAgentsByUserID(ctx context.Context, userID string) ([]Agent, error)
 	GetExecutionByID(ctx context.Context, id pgtype.UUID) (Execution, error)
 	GetExecutionsByAgentID(ctx context.Context, arg GetExecutionsByAgentIDParams) ([]Execution, error)
@@ -33,13 +39,19 @@ type Querier interface {
 	GetExecutionsByWorkflowID(ctx context.Context, arg GetExecutionsByWorkflowIDParams) ([]Execution, error)
 	GetIntegrationByID(ctx context.Context, id pgtype.UUID) (Integration, error)
 	GetIntegrationsByUserID(ctx context.Context, userID string) ([]GetIntegrationsByUserIDRow, error)
+	GetLatestWorkflowVersionByName(ctx context.Context, arg GetLatestWorkflowVersionByNameParams) (Workflow, error)
 	GetSessionByID(ctx context.Context, id string) (Session, error)
 	GetSessionByToken(ctx context.Context, token string) (Session, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
+	GetUserIDByWorkflowID(ctx context.Context, id pgtype.UUID) (string, error)
 	GetWorkflowByID(ctx context.Context, id pgtype.UUID) (Workflow, error)
+	GetWorkflowVersion(ctx context.Context, arg GetWorkflowVersionParams) (Workflow, error)
+	GetWorkflowVersionHistory(ctx context.Context, arg GetWorkflowVersionHistoryParams) ([]Workflow, error)
 	GetWorkflowsByAgentID(ctx context.Context, agentID pgtype.UUID) ([]Workflow, error)
 	GetWorkflowsByUserID(ctx context.Context, userID string) ([]Workflow, error)
+	RemoveAgentWorkflowAssociation(ctx context.Context, arg RemoveAgentWorkflowAssociationParams) error
+	SetPrimaryWorkflowForAgent(ctx context.Context, arg SetPrimaryWorkflowForAgentParams) error
 	UpdateAgent(ctx context.Context, arg UpdateAgentParams) (Agent, error)
 	UpdateExecutionStatus(ctx context.Context, arg UpdateExecutionStatusParams) (Execution, error)
 	UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) (UpdateIntegrationRow, error)

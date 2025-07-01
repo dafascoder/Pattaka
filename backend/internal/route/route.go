@@ -16,92 +16,24 @@ type Router struct {
 	integrationHandler *handlers.IntegrationHandler
 	executionHandler   *handlers.ExecutionHandler
 	authHandler        *handlers.AuthHandler
+	userHandler        *handlers.UserHandler
 	logger             *logger.Logger
 }
 
-func NewRouter(agentService *services.AgentService, workflowService *services.WorkflowService, integrationService *services.IntegrationService, executionService *services.ExecutionService, authService *services.AuthService) *Router {
+func NewRouter(agentService *services.AgentService, userService *services.UserService, workflowService *services.WorkflowService, integrationService *services.IntegrationService, executionService *services.ExecutionService, authService *services.AuthService) *Router {
 	return &Router{
 		agentHandler:       handlers.NewAgentHandler(agentService),
 		workflowHandler:    handlers.NewWorkflowHandler(workflowService),
 		integrationHandler: handlers.NewIntegrationHandler(integrationService),
 		executionHandler:   handlers.NewExecutionHandler(executionService),
 		authHandler:        handlers.NewAuthHandler(authService),
+		userHandler:        handlers.NewUserHandler(userService),
 		logger:             logger.Get(),
 	}
 }
 
 // MiddlewareFunc represents a middleware function
 type MiddlewareFunc func(http.HandlerFunc) http.HandlerFunc
-
-// meHandler returns current authenticated user information
-func (r *Router) meHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "GET" {
-		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Get authenticated user context
-	if authContext, ok := middleware.GetAuthContext(req); ok {
-		r.logger.WithFields(map[string]interface{}{
-			"user_id":    authContext.User.ID,
-			"user_email": authContext.User.Email,
-			"session_id": authContext.Session.ID,
-		}).Info("User info requested")
-
-		utils.RespondWithJSON(w, map[string]interface{}{
-			"user":    authContext.User,
-			"session": authContext.Session,
-		})
-	} else {
-		r.logger.Warn("No auth context found")
-		utils.RespondWithError(w, "Not authenticated", http.StatusUnauthorized)
-	}
-}
-
-// Temporary dashboard handler for MVP
-func (r *Router) dashboardHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "GET" {
-		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Get authenticated user if available
-	userID := "demo-user" // Default for MVP
-	if authContext, ok := middleware.GetAuthContext(req); ok {
-		userID = authContext.User.ID
-	}
-
-	r.logger.WithField("user_id", userID).Info("Dashboard data requested")
-
-	// Mock dashboard data for MVP
-	dashboardData := map[string]interface{}{
-		"stats": map[string]interface{}{
-			"agents": map[string]interface{}{
-				"total":    3,
-				"active":   2,
-				"inactive": 1,
-			},
-			"workflows": map[string]interface{}{
-				"total":  5,
-				"active": 3,
-			},
-			"integrations": map[string]interface{}{
-				"total":  2,
-				"active": 2,
-			},
-			"executions": map[string]interface{}{
-				"total":       15,
-				"running":     1,
-				"completed":   12,
-				"failed":      2,
-				"successRate": 85.7,
-			},
-		},
-		"recentExecutions": []map[string]interface{}{},
-	}
-
-	utils.RespondWithJSON(w, dashboardData)
-}
 
 // integrationsHandler routes integration requests to appropriate handlers
 func (r *Router) integrationsHandler(w http.ResponseWriter, req *http.Request) {
@@ -203,10 +135,7 @@ func (router *Router) SetupRoutesWithMiddleware(middlewareChain MiddlewareFunc) 
 	mux.HandleFunc("/api/health", applyMiddleware(handlers.HealthHandler))
 
 	// Test endpoint to show current user (for debugging)
-	mux.HandleFunc("/api/me", applyMiddleware(router.meHandler))
-
-	// Dashboard endpoint
-	mux.HandleFunc("/api/dashboard", applyMiddleware(router.dashboardHandler))
+	mux.HandleFunc("/api/me", applyMiddleware(router.userHandler.AuthenticatedUser))
 
 	// Agent endpoints
 	mux.HandleFunc("/api/agents", applyMiddleware(router.agentHandler.HandleAgents))

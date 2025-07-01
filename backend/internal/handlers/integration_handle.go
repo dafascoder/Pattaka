@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"backend/internal/logger"
+	"backend/internal/middleware"
 	"backend/internal/models"
 	"backend/internal/services"
 	"backend/utils"
@@ -23,14 +24,14 @@ func NewIntegrationHandler(integrationService *services.IntegrationService) *Int
 
 // GetIntegrations handles GET /integrations
 func (h *IntegrationHandler) GetIntegrations(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from context (assuming it's set by auth middleware)
-	userID := r.Context().Value("userID")
-	if userID == nil {
+	// Get user ID from auth context using the middleware helper
+	authContext, ok := middleware.GetAuthContext(r)
+	if !ok {
 		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	integrations, err := h.integrationService.GetIntegrations(r.Context(), userID.(string))
+	integrations, err := h.integrationService.GetIntegrations(r.Context(), authContext.User.ID)
 	if err != nil {
 		h.logger.WithError(err).Error("Failed to get integrations")
 		utils.RespondWithError(w, "Failed to retrieve integrations", http.StatusInternalServerError)
@@ -62,9 +63,9 @@ func (h *IntegrationHandler) GetIntegration(w http.ResponseWriter, r *http.Reque
 
 // CreateIntegration handles POST /integrations
 func (h *IntegrationHandler) CreateIntegration(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from context
-	userID := r.Context().Value("userID")
-	if userID == nil {
+	// Get user ID from auth context using the middleware helper
+	authContext, ok := middleware.GetAuthContext(r)
+	if !ok {
 		utils.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -77,7 +78,7 @@ func (h *IntegrationHandler) CreateIntegration(w http.ResponseWriter, r *http.Re
 
 	// Generate new UUID for the integration
 	integration.ID = uuid.New()
-	integration.UserID = userID.(string)
+	integration.UserID = authContext.User.ID
 
 	// Validate required fields
 	if integration.Name == "" {

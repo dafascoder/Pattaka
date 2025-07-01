@@ -51,17 +51,6 @@ func (q *Queries) CreateExecution(ctx context.Context, arg CreateExecutionParams
 	return i, err
 }
 
-const getAgentIDByWorkflowID = `-- name: GetAgentIDByWorkflowID :one
-SELECT agent_id FROM workflows WHERE id = $1
-`
-
-func (q *Queries) GetAgentIDByWorkflowID(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, getAgentIDByWorkflowID, id)
-	var agent_id pgtype.UUID
-	err := row.Scan(&agent_id)
-	return agent_id, err
-}
-
 const getExecutionByID = `-- name: GetExecutionByID :one
 SELECT id, workflow_id, agent_id, status, input_data, output_data, error_message, 
        execution_time_ms, started_at, completed_at, created_at 
@@ -138,8 +127,8 @@ const getExecutionsByUserID = `-- name: GetExecutionsByUserID :many
 SELECT e.id, e.workflow_id, e.agent_id, e.status, e.input_data, e.output_data, 
        e.error_message, e.execution_time_ms, e.started_at, e.completed_at, e.created_at 
 FROM executions e 
-JOIN agents a ON e.agent_id = a.id 
-WHERE a.user_id = $1 
+JOIN workflows w ON e.workflow_id = w.id 
+WHERE w.user_id = $1 
 ORDER BY e.started_at DESC 
 LIMIT $2
 `
@@ -225,6 +214,17 @@ func (q *Queries) GetExecutionsByWorkflowID(ctx context.Context, arg GetExecutio
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserIDByWorkflowID = `-- name: GetUserIDByWorkflowID :one
+SELECT user_id FROM workflows WHERE id = $1
+`
+
+func (q *Queries) GetUserIDByWorkflowID(ctx context.Context, id pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getUserIDByWorkflowID, id)
+	var user_id string
+	err := row.Scan(&user_id)
+	return user_id, err
 }
 
 const updateExecutionStatus = `-- name: UpdateExecutionStatus :one

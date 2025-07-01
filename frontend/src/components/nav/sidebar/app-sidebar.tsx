@@ -46,11 +46,6 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Agents",
-      url: "/dashboard/agents",
-      icon: IconRobot,
-    },
-    {
       title: "Workflows",
       url: "/dashboard/workflows",
       icon: IconGitBranch,
