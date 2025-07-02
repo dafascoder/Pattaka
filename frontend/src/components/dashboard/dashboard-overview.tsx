@@ -34,7 +34,7 @@ export function DashboardOverview({
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="font-bold text-3xl">Dashboard</h1>
-					<p className="mt-2 text-muted-foreground">Welcome to Voltig!</p>
+					<p className="mt-2 text-muted-foreground">Welcome to Pattaka!</p>
 				</div>
 			</div>
 
