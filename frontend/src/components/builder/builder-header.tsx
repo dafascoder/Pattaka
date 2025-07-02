@@ -1,201 +1,204 @@
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Link } from '@tanstack/react-router'
-import { 
-  Breadcrumb, 
-  BreadcrumbList, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbSeparator, 
-  BreadcrumbPage 
-} from '../ui/breadcrumb'
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { 
-  IconMenu2, 
-  IconBug, 
-  IconRotate2, 
-  IconCloudUpload, 
-  IconPlayerPlay, 
-  IconHome,
-  IconChevronDown,
-  IconSettings,
-  IconHistory,
-  IconShare,
-  IconLayoutGrid
-} from '@tabler/icons-react'
-import { useSidebar } from '../ui/sidebar'
+import {
+	IconBug,
+	IconChevronDown,
+	IconChevronLeft,
+	IconCloudUpload,
+	IconHistory,
+	IconHome,
+	IconLayoutGrid,
+	IconMenu2,
+	IconPlayerPlay,
+	IconRotate2,
+	IconSettings,
+	IconShare,
+} from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { DebugView } from "@/components/debug/debug-view";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "../ui/breadcrumb";
+import { useSidebar } from "../ui/sidebar";
 
 interface BuilderHeaderProps {
-  workflowName?: string
-  lastSaved?: string
-  onRun?: () => void
-  onDebug?: () => void
-  onRevert?: () => void
-  onSave?: () => void
+	workflowId?: string;
+	workflowName?: string;
+	lastSaved?: string;
+	onRun?: () => void;
+	onDebug?: () => void;
+	onRevert?: () => void;
+	onSave?: () => void;
 }
 
-export function BuilderHeader({ 
-  workflowName = "Untitled Workflow",
-  lastSaved,
-  onRun,
-  onDebug,
-  onRevert,
-  onSave
+export function BuilderHeader({
+	workflowId,
+	workflowName = "Untitled Workflow",
+	lastSaved,
+	onRun,
+	onDebug,
+	onRevert,
+	onSave,
 }: BuilderHeaderProps) {
-  const { toggleSidebar } = useSidebar()
+	const { toggleSidebar } = useSidebar();
+	const [isDebugOpen, setIsDebugOpen] = useState(false);
+	const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(
+		null
+	);
 
-  return (
-    <TooltipProvider>
-      <header className="bg-background sticky top-0 z-50 flex w-full items-center border-b shadow-sm">
-        <div className="flex h-14 w-full items-center gap-4 px-4">
-          {/* Sidebar Toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="h-8 w-8"
-                variant="ghost"
-                size="icon"
-                onClick={toggleSidebar}
-              >
-                <IconMenu2 size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Toggle sidebar</p>
-            </TooltipContent>
-          </Tooltip>
+	return (
+		<TooltipProvider>
+			<header className="sticky top-0 z-50 flex w-full items-center border-b bg-background shadow-sm">
+				<div className="flex h-14 w-full items-center gap-4 px-4">
+					{/* Sidebar Toggle */}
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								className="h-8 w-8"
+								onClick={toggleSidebar}
+								size="icon"
+								variant="ghost"
+							>
+								<IconMenu2 size={16} />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>
+							<p>Toggle sidebar</p>
+						</TooltipContent>
+					</Tooltip>
 
-          <Separator orientation="vertical" className="h-6" />
+					<Separator className="h-6" orientation="vertical" />
 
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2">
-            <IconLayoutGrid className="h-4 w-4" />
-            <span>{workflowName}</span>
-          </div>
+					<div className="flex items-center gap-2">
+						<Link
+							className={buttonVariants({ variant: "ghost", size: "sm" })}
+							to="/dashboard/workflows"
+						>
+							<IconChevronLeft size={16} />
+						</Link>
+						<span>{workflowName}</span>
+					</div>
 
-          {/* Status indicator */}
-          {lastSaved && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Last saved: {lastSaved}</span>
-            </div>
-          )}
+					{/* Status indicator */}
+					{lastSaved && (
+						<div className="flex items-center gap-2 text-muted-foreground text-sm">
+							<span>Last saved: {lastSaved}</span>
+						</div>
+					)}
 
-          {/* Actions */}
-          <div className="ml-auto flex items-center gap-2">
-            {/* Primary Actions */}
-            <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={onRun}
-                    className="gap-2"
-                  >   
-                    <IconPlayerPlay size={16} />
-                    Run
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Execute workflow</p>
-                </TooltipContent>
-              </Tooltip>
+					{/* Actions */}
+					<div className="ml-auto flex items-center gap-2">
+						{/* Primary Actions */}
+						<div className="flex items-center gap-1">
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										className="gap-2"
+										onClick={onRun}
+										size="sm"
+										variant="default"
+									>
+										<IconPlayerPlay size={16} />
+										Run
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Execute workflow</p>
+								</TooltipContent>
+							</Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={onDebug}
-                    className="gap-2"
-                  >
-                    <IconBug size={16} />
-                    Debug
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Debug workflow execution</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+							<DebugView
+								isOpen={isDebugOpen}
+								onExecutionSelect={setSelectedExecutionId}
+								onOpenChange={setIsDebugOpen}
+								workflowId={workflowId || "current-workflow"}
+							/>
+						</div>
 
-            <Separator orientation="vertical" className="h-6" />
+						<Separator className="h-6" orientation="vertical" />
 
-            {/* Secondary Actions */}
-            <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={onSave}
-                    className="gap-2"
-                  >
-                    <IconCloudUpload size={16} />
-                    Save
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Save workflow</p>
-                </TooltipContent>
-              </Tooltip>
+						{/* Secondary Actions */}
+						<div className="flex items-center gap-1">
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										className="gap-2"
+										onClick={onSave}
+										size="sm"
+										variant="ghost"
+									>
+										<IconCloudUpload size={16} />
+										Save
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Save workflow</p>
+								</TooltipContent>
+							</Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={onRevert}
-                    className="gap-2"
-                  >
-                    <IconRotate2 size={16} />
-                    Revert
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Revert changes</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										className="gap-2"
+										onClick={onRevert}
+										size="sm"
+										variant="ghost"
+									>
+										<IconRotate2 size={16} />
+										Revert
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Revert changes</p>
+								</TooltipContent>
+							</Tooltip>
+						</div>
 
-            <Separator orientation="vertical" className="h-6" />
+						<Separator className="h-6" orientation="vertical" />
 
-            {/* More Actions Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <IconChevronDown size={16} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <IconHistory size={16} className="mr-2" />
-                  Version History
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <IconShare size={16} className="mr-2" />
-                  Share Workflow
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <IconSettings size={16} className="mr-2" />
-                  Workflow Settings
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
-    </TooltipProvider>
-  )
-} 
+						{/* More Actions Dropdown */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button size="sm" variant="ghost">
+									<IconChevronDown size={16} />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem>
+									<IconHistory className="mr-2" size={16} />
+									Version History
+								</DropdownMenuItem>
+								<DropdownMenuItem>
+									<IconShare className="mr-2" size={16} />
+									Share Workflow
+								</DropdownMenuItem>
+								<DropdownMenuItem>
+									<IconSettings className="mr-2" size={16} />
+									Workflow Settings
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				</div>
+			</header>
+		</TooltipProvider>
+	);
+}

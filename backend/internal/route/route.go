@@ -77,6 +77,8 @@ func (r *Router) executionByIDHandler(w http.ResponseWriter, req *http.Request) 
 	switch req.Method {
 	case "GET":
 		r.executionHandler.GetExecution(w, req)
+	case "PUT":
+		r.executionHandler.UpdateExecutionStatus(w, req)
 	default:
 		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -148,6 +150,18 @@ func (router *Router) SetupRoutesWithMiddleware(middlewareChain MiddlewareFunc) 
 	// Executions endpoints
 	mux.HandleFunc("/api/executions", applyMiddleware(router.executionsHandler))
 	mux.HandleFunc("/api/executions/", applyMiddleware(router.executionByIDHandler))
+
+	// Additional execution routes with specific paths
+	mux.HandleFunc("/api/executions/{id}/status", applyMiddleware(router.executionHandler.UpdateExecutionStatus))
+	mux.HandleFunc("/api/executions/{id}/steps", applyMiddleware(router.executionHandler.GetExecutionSteps))
+	mux.HandleFunc("/api/executions/{id}/cancel", applyMiddleware(router.executionHandler.CancelExecution))
+
+	// Workflow execution routes
+	mux.HandleFunc("/api/workflows/{workflowId}/executions", applyMiddleware(router.executionHandler.GetExecutionsByWorkflow))
+	mux.HandleFunc("/api/workflows/{workflowId}/execute", applyMiddleware(router.executionHandler.ExecuteWorkflow))
+
+	// Agent execution routes
+	mux.HandleFunc("/api/agents/{agentId}/executions", applyMiddleware(router.executionHandler.GetExecutionsByAgent))
 
 	// Workflows endpoints
 	mux.HandleFunc("/api/workflows", applyMiddleware(router.workflowsHandler))

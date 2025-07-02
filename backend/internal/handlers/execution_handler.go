@@ -219,3 +219,121 @@ func (h *ExecutionHandler) GetExecutionsByAgent(w http.ResponseWriter, r *http.R
 
 	utils.RespondWithJSON(w, executions)
 }
+
+// ExecuteWorkflow handles POST /workflows/{workflowId}/execute
+func (h *ExecutionHandler) ExecuteWorkflow(w http.ResponseWriter, r *http.Request) {
+	// Extract workflow ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 || pathParts[2] == "" {
+		utils.RespondWithError(w, "Workflow ID is required", http.StatusBadRequest)
+		return
+	}
+	workflowID := pathParts[2]
+
+	// Parse trigger data from request body
+	var triggerData map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&triggerData); err != nil {
+		triggerData = make(map[string]interface{})
+	}
+
+	// Convert string to UUID
+	workflowUUID, err := uuid.Parse(workflowID)
+	if err != nil {
+		utils.RespondWithError(w, "Invalid workflow ID", http.StatusBadRequest)
+		return
+	}
+
+	// Create execution record
+	execution := models.Execution{
+		ID:         uuid.New(),
+		WorkflowID: workflowUUID,
+		Status:     "pending",
+		InputData:  triggerData,
+		StartedAt:  time.Now(),
+	}
+
+	createdExecution, err := h.executionService.CreateExecution(r.Context(), execution)
+	if err != nil {
+		h.logger.WithError(err).Error("Failed to create execution")
+		utils.RespondWithError(w, "Failed to create execution", http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Trigger actual workflow execution
+	// For now, we'll simulate execution status updates
+
+	utils.RespondWithJSON(w, createdExecution)
+}
+
+// GetExecutionSteps handles GET /executions/{id}/steps
+func (h *ExecutionHandler) GetExecutionSteps(w http.ResponseWriter, r *http.Request) {
+	// Extract execution ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 || pathParts[2] == "" {
+		utils.RespondWithError(w, "Execution ID is required", http.StatusBadRequest)
+		return
+	}
+	executionID := pathParts[2]
+
+	// TODO: Implement actual execution steps retrieval
+	// For now, return mock data
+	steps := []map[string]interface{}{
+		{
+			"id":                "step-1",
+			"execution_id":      executionID,
+			"step_name":         "Webhook Trigger",
+			"step_type":         "trigger",
+			"status":            "completed",
+			"input_data":        map[string]interface{}{"trigger": "manual"},
+			"output_data":       map[string]interface{}{"success": true},
+			"execution_time_ms": 150,
+			"started_at":        time.Now().Add(-2 * time.Minute).Format(time.RFC3339),
+			"completed_at":      time.Now().Add(-2 * time.Minute).Add(150 * time.Millisecond).Format(time.RFC3339),
+			"created_at":        time.Now().Add(-2 * time.Minute).Format(time.RFC3339),
+		},
+		{
+			"id":                "step-2",
+			"execution_id":      executionID,
+			"step_name":         "HTTP Request",
+			"step_type":         "action",
+			"status":            "running",
+			"input_data":        map[string]interface{}{"url": "https://api.example.com"},
+			"output_data":       map[string]interface{}{},
+			"execution_time_ms": 0,
+			"started_at":        time.Now().Add(-30 * time.Second).Format(time.RFC3339),
+			"created_at":        time.Now().Add(-30 * time.Second).Format(time.RFC3339),
+		},
+	}
+
+	utils.RespondWithJSON(w, steps)
+}
+
+// CancelExecution handles PUT /executions/{id}/cancel
+func (h *ExecutionHandler) CancelExecution(w http.ResponseWriter, r *http.Request) {
+	// Extract execution ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 || pathParts[2] == "" {
+		utils.RespondWithError(w, "Execution ID is required", http.StatusBadRequest)
+		return
+	}
+	executionID := pathParts[2]
+
+	// Update execution status to cancelled
+	now := time.Now()
+	updatedExecution, err := h.executionService.UpdateExecutionStatus(
+		r.Context(),
+		executionID,
+		"cancelled",
+		make(map[string]interface{}),
+		&now,
+		int32(now.Sub(time.Now().Add(-1*time.Minute)).Milliseconds()),
+		"Execution cancelled by user",
+	)
+	if err != nil {
+		h.logger.WithField("executionID", executionID).WithError(err).Error("Failed to cancel execution")
+		utils.RespondWithError(w, "Failed to cancel execution", http.StatusInternalServerError)
+		return
+	}
+
+	utils.RespondWithJSON(w, updatedExecution)
+}

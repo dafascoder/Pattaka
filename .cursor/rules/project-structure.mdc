@@ -1,0 +1,332 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Voltig - Project Structure Documentation
+
+## Overview
+Voltig is a full-stack workflow automation platform built with Go backend and React frontend. It provides a visual workflow builder, execution engine, and management dashboard for creating and running automated workflows.
+
+## Architecture
+
+```
+voltig/
+├── backend/          # Go API server and workflow engine
+├── frontend/         # React/TypeScript web application
+├── docker-compose.yml
+├── Makefile
+└── README.md
+```
+
+## Backend Structure (Go)
+
+### Core Application
+- **`main.go`** - Application entry point and server initialization
+- **`go.mod/go.sum`** - Go module dependencies
+
+### Internal Packages
+
+#### Configuration & Infrastructure
+```
+internal/
+├── config/           # Application configuration
+│   └── config.go
+├── db/              # Database layer
+│   ├── db.go        # Database connection and setup
+│   ├── queries/     # SQL queries (SQLC)
+│   └── sqlc/        # Generated Go code from SQL
+├── logger/          # Logging utilities
+├── middleware/      # HTTP middleware
+└── route/           # Route definitions
+```
+
+#### API Layer
+```
+internal/handlers/
+├── agent_handler.go      # Agent management endpoints
+├── auth_handler.go       # Authentication endpoints
+├── execution_handler.go  # Workflow execution endpoints
+├── health_handler.go     # Health check endpoints
+├── integration_handle.go # Integration management
+├── user_handler.go       # User management
+└── workflow_handler.go   # Workflow CRUD operations
+```
+
+#### Business Logic
+```
+internal/services/
+├── agent_service.go      # Agent business logic
+├── auth_service.go       # Authentication logic
+├── execution_service.go  # Execution management
+├── integration_service.go # Integration handling
+├── user_service.go       # User management
+└── workflow_service.go   # Workflow operations
+```
+
+#### Workflow Engine
+```
+internal/workflow/
+├── engine.go            # Core workflow execution engine
+├── runner.go            # Workflow runner implementation
+├── types.go             # Workflow type definitions
+├── interfaces/          # Workflow interfaces
+├── actions/             # Workflow action implementations
+│   ├── http_action.go   # HTTP request actions
+│   └── log_action.go    # Logging actions
+└── triggers/            # Workflow trigger implementations
+    ├── http_trigger.go      # HTTP webhook triggers
+    ├── manual_trigger.go    # Manual execution triggers
+    └── schedule_trigger.go  # Scheduled triggers
+```
+
+### Database
+```
+migrations/              # Database schema migrations
+└── 20250629030602_init.sql
+
+db/queries/             # SQL query definitions
+├── account.sql         # Account-related queries
+├── agents.sql          # Agent queries
+├── executions.sql      # Execution tracking
+├── integrations.sql    # Integration management
+├── sessions.sql        # Session management
+├── users.sql           # User management
+└── workflows.sql       # Workflow storage
+```
+
+### Utilities
+```
+utils/
+├── jwt.go              # JWT token handling
+├── password.go         # Password hashing/validation
+├── utils.go            # General utilities
+└── version.go          # Version information
+```
+
+## Frontend Structure (React/TypeScript)
+
+### Application Setup
+- **`vite.config.ts`** - Vite build configuration
+- **`tsconfig.json`** - TypeScript configuration
+- **`package.json`** - Dependencies and scripts
+- **`biome.json`** - Code formatting and linting
+
+### Source Structure
+
+#### Core Application
+```
+src/
+├── router.tsx           # TanStack Router configuration
+├── routeTree.gen.ts     # Generated route tree
+├── server.tsx           # SSR server setup
+├── global-middleware.ts # Global middleware
+└── styles/app.css       # Global styles
+```
+
+#### Routing
+```
+src/routes/
+├── __root.tsx          # Root layout component
+├── (auth)/             # Authentication routes
+│   ├── _layout.tsx     # Auth layout
+│   ├── login.tsx       # Login page
+│   └── register.tsx    # Registration page
+├── (authenticated)/    # Protected routes
+│   ├── builder.tsx     # Workflow builder
+│   └── dashboard/      # Dashboard pages
+│       ├── _layout.tsx # Dashboard layout
+│       └── [various dashboard pages]
+├── (landing)/          # Public landing pages
+│   └── index.tsx       # Homepage
+└── api/                # API routes
+```
+
+#### Components
+
+##### Authentication
+```
+src/components/auth/
+├── login-form.tsx      # Login form component
+└── register-form.tsx   # Registration form
+```
+
+##### Workflow Builder
+```
+src/components/builder/
+├── workflow-builder.tsx    # Main builder component
+├── builder-layout.tsx      # Builder layout
+├── builder-header.tsx      # Builder header
+├── component-palette.tsx   # Component palette
+├── custom-edge.tsx         # Custom flow edges
+├── node-types.tsx          # Node type definitions
+├── nodes/                  # Flow node components
+│   ├── actions/            # Action nodes
+│   │   ├── email-action.tsx
+│   │   ├── http-action.tsx
+│   │   └── log-action.tsx
+│   ├── flow/               # Flow control nodes
+│   │   └── condition.tsx
+│   ├── triggers/           # Trigger nodes
+│   │   ├── manual-trigger.tsx
+│   │   ├── scheduled-trigger.tsx
+│   │   └── webhook-trigger.tsx
+│   ├── helpers.tsx         # Node utilities
+│   └── types.ts            # Node type definitions
+└── sidebar/                # Builder sidebar
+    ├── builder-sidebar.tsx
+    └── node-config-sidebar.tsx
+```
+
+##### Dashboard
+```
+src/components/dashboard/
+├── dashboard-overview.tsx  # Dashboard overview
+└── agents-list.tsx         # Agents listing
+```
+
+##### Workflow Management
+```
+src/components/workflow/
+├── workflow-create-dialog.tsx  # Create workflow dialog
+├── workflow-error.tsx          # Error handling
+├── workflow-header.tsx         # Workflow header
+├── workflow-loading.tsx        # Loading states
+├── workflow-stats.tsx          # Statistics display
+└── workflow-table.tsx          # Workflow listing table
+```
+
+##### Debug & Development
+```
+src/components/debug/
+├── debug-test.tsx              # Debug test components
+├── debug-view.tsx              # Debug view
+└── workflow-execution-overlay.tsx # Execution debugging
+```
+
+##### UI Components
+```
+src/components/ui/
+├── [shadcn/ui components]      # Reusable UI components
+├── button.tsx, card.tsx, dialog.tsx, etc.
+└── [50+ UI components]
+```
+
+##### Navigation
+```
+src/components/nav/
+├── site-header.tsx     # Main site header
+└── sidebar/            # App sidebar
+    ├── app-sidebar.tsx
+    ├── nav-main.tsx
+    └── nav-user.tsx
+```
+
+#### Services & Data Layer
+```
+src/services/
+├── agent-service.ts        # Agent API calls
+├── auth-service.ts         # Authentication API
+├── execution-service.ts    # Execution API
+├── user-service.ts         # User API
+└── workflow-service.ts     # Workflow API
+
+src/hooks/
+├── useUser.ts              # User state hook
+├── useWorkflow.ts          # Workflow operations
+├── useWorkflowBuilder.ts   # Builder state
+└── use-mobile.ts           # Mobile detection
+
+src/stores/
+└── workflow-builder-store.ts # Workflow builder state management
+```
+
+#### Utilities & Configuration
+```
+src/lib/
+├── auth-client.ts          # Client-side auth
+├── auth-middleware.ts      # Auth middleware
+├── auth-server-func.ts     # Server-side auth
+└── utils.ts                # Utility functions
+
+src/utils/
+├── fetch-wrapper.ts        # API wrapper
+├── logger.ts               # Logging utilities
+├── promise-wrapper.ts      # Promise utilities
+└── seo.ts                  # SEO utilities
+
+src/config/
+└── constants.ts            # Application constants
+
+src/types/
+└── api.ts                  # API type definitions
+```
+
+## Key Technologies
+
+### Backend
+- **Go** - Primary backend language
+- **Standard Library** - HTTP web framework
+- **SQLC** - Type-safe SQL code generation
+- **PostgreSQL** - Database
+- **JWT** - Authentication tokens
+
+### Frontend
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **TanStack Router** - File-based routing
+- **React Flow** - Visual workflow builder
+- **shadcn/ui** - UI component library
+- **Tailwind CSS** - Styling (inferred from component structure)
+
+### Development Tools
+- **Docker Compose** - Local development environment
+- **Lefthook** - Git hooks
+- **Biome** - Code formatting and linting
+- **PNPM** - Package management
+
+## Development Workflow
+
+### Database
+1. SQL queries are defined in `backend/internal/db/queries/`
+2. SQLC generates type-safe Go code in `backend/internal/db/sqlc/`
+3. Migrations are stored in `backend/migrations/`
+
+### API Development
+1. Define handlers in `backend/internal/handlers/`
+2. Implement business logic in `backend/internal/services/`
+3. Add routes in `backend/internal/route/`
+
+### Frontend Development
+1. Create routes in `src/routes/`
+2. Build components in `src/components/`
+3. Manage state with hooks and stores
+4. Style with Tailwind CSS and shadcn/ui components
+
+### Workflow Engine
+1. Define workflow types in `backend/internal/workflow/types.go`
+2. Implement actions in `backend/internal/workflow/actions/`
+3. Implement triggers in `backend/internal/workflow/triggers/`
+4. Extend engine logic in `backend/internal/workflow/engine.go`
+
+## Features
+
+### Core Features
+- **Visual Workflow Builder** - Drag-and-drop workflow creation
+- **Workflow Execution Engine** - Reliable workflow processing
+- **Multiple Triggers** - HTTP webhooks, scheduled, manual
+- **Various Actions** - HTTP requests, email, logging
+- **User Management** - Authentication and authorization
+- **Agent System** - Workflow execution agents
+- **Integration Management** - External service integrations
+- **Execution Tracking** - Monitor workflow runs
+- **Dashboard** - Overview and management interface
+
+### Technical Features
+- **Type Safety** - Full TypeScript and SQLC integration
+- **Real-time Updates** - Live workflow execution monitoring
+- **Responsive Design** - Mobile-friendly interface
+- **Extensible Architecture** - Plugin-based action/trigger system
+- **Development Tools** - Debug views and testing utilities
+

@@ -1,72 +1,71 @@
-import { Agent } from "@/types/api";
+import type { Agent } from "@/types/api";
 import { fetchWrapper } from "@/utils/fetch-wrapper";
 
 export const agentService = {
-  getAgents: async (): Promise<Agent[]> => {
-    const response = await fetchWrapper('/api/agents', {
-      method: 'GET',
-    });
+	getAgents: async (): Promise<Agent[]> => {
+		const response = await fetchWrapper("/api/agents", {
+			method: "GET",
+		});
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch agents');
-    }
+		if (!response.success) {
+			throw new Error(response.error || "Failed to fetch agents");
+		}
 
-    const data = response.data as Agent[];
-    console.log(data)
-    return data;
-  },
+		const data = response.data as Agent[];
+		console.log(data);
+		return data;
+	},
 
-  getAgent: async (id: string): Promise<Agent> => {
-    const response = await fetchWrapper(`/api/agents/${id}`, {
-      method: 'GET',
-    });
+	getAgent: async (id: string): Promise<Agent> => {
+		const response = await fetchWrapper(`/api/agents/${id}`, {
+			method: "GET",
+		});
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch agent');
-    }
+		if (!response.success) {
+			throw new Error(response.error || "Failed to fetch agent");
+		}
 
-    const data = response.data as Agent;
-    return data;
-  },
+		const data = response.data as Agent;
+		return data;
+	},
 
-  createAgent: async (agent: Agent): Promise<Agent> => {
-    const response = await fetchWrapper('/api/agents', {
-      method: 'POST',
-      body: JSON.stringify(agent),
-    });
+	createAgent: async (agent: Agent): Promise<Agent> => {
+		const response = await fetchWrapper("/api/agents", {
+			method: "POST",
+			body: JSON.stringify(agent),
+		});
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to create agent');
-    }
+		if (!response.success) {
+			throw new Error(response.error || "Failed to create agent");
+		}
 
-    const data = response.data as Agent;
-    return data;
-  },
+		const data = response.data as Agent;
+		return data;
+	},
 
-  updateAgent: async (id: string, agent: Agent): Promise<Agent> => {
-    const response = await fetchWrapper(`/api/agents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(agent),
-    });
+	updateAgent: async (id: string, agent: Agent): Promise<Agent> => {
+		const response = await fetchWrapper(`/api/agents/${id}`, {
+			method: "PUT",
+			body: JSON.stringify(agent),
+		});
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to update agent');
-    }
+		if (!response.success) {
+			throw new Error(response.error || "Failed to update agent");
+		}
 
-    const data = response.data as Agent;
-    return data;
-  },
+		const data = response.data as Agent;
+		return data;
+	},
 
-  deleteAgent: async (id: string) => {
-    const response = await fetchWrapper(`/api/agents/${id}`, {
-      method: 'DELETE',
-    });
+	deleteAgent: async (id: string) => {
+		const response = await fetchWrapper(`/api/agents/${id}`, {
+			method: "DELETE",
+		});
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to delete agent');
-    }
+		if (!response.success) {
+			throw new Error(response.error || "Failed to delete agent");
+		}
 
-    return response.data;
-  },
-
+		return response.data;
+	},
 };
