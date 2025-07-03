@@ -58,6 +58,132 @@ export interface UpdateAgentRequest {
 	status?: string;
 }
 
+// Project Types
+export interface Project {
+	id: string;
+	displayName: string;
+	ownerId: string;
+	platformId: string;
+	notifyStatus: string;
+	externalId?: string;
+	releasesEnabled: boolean;
+	metadata: Record<string, any>;
+	created: string;
+	updated: string;
+}
+
+export interface ProjectUsage {
+	id: string;
+	displayName: string;
+	flowCount: number;
+	flowRunCount: number;
+	connectionCount: number;
+}
+
+export interface CreateProjectRequest {
+	displayName: string;
+	notifyStatus?: string;
+	externalId?: string;
+	releasesEnabled?: boolean;
+	metadata?: Record<string, any>;
+}
+
+export interface UpdateProjectRequest {
+	displayName?: string;
+	notifyStatus?: string;
+	externalId?: string;
+	releasesEnabled?: boolean;
+	metadata?: Record<string, any>;
+}
+
+// Flow Types  
+export interface Flow {
+	id: string;
+	projectId: string;
+	folderId?: string;
+	folderName?: string;
+	status: string;
+	schedule?: string;
+	created: string;
+	updated: string;
+}
+
+export interface CreateFlowRequest {
+	folderId?: string;
+	status?: string;
+	schedule?: string;
+}
+
+export interface UpdateFlowRequest {
+	folderId?: string;
+	status?: string;
+	schedule?: string;
+}
+
+// Flow Version Types
+export interface FlowVersion {
+	id: string;
+	flowId: string;
+	version: number;
+	displayName: string;
+	trigger: Record<string, any>;
+	steps: Record<string, any>;
+	status: string;
+	created: string;
+	updated: string;
+}
+
+export interface CreateFlowVersionRequest {
+	displayName: string;
+	trigger: Record<string, any>;
+	steps: Record<string, any>;
+	status?: string;
+}
+
+export interface UpdateFlowVersionRequest {
+	displayName?: string;
+	trigger?: Record<string, any>;
+	steps?: Record<string, any>;
+	status?: string;
+}
+
+// Flow Run Types
+export interface FlowRun {
+	id: string;
+	flowVersionId: string;
+	projectId: string;
+	status: string;
+	startTime: string;
+	finishTime?: string;
+	environment: string;
+	flowDisplayName?: string;
+	flowVersionName?: string;
+	flowVersionNumber?: number;
+	tags: string[];
+	pauseMetadata: Record<string, any>;
+	created: string;
+	updated: string;
+}
+
+export interface ExecuteFlowRequest {
+	environment?: string;
+	payload?: Record<string, any>;
+}
+
+// App Connection Types
+export interface AppConnection {
+	id: string;
+	projectId: string;
+	name: string;
+	appName: string;
+	config: Record<string, any>;
+	credentials?: Record<string, any>;
+	status: string;
+	created_at: string;
+	updated_at: string;
+}
+
+// Legacy Workflow type for backward compatibility (deprecated)
 export interface Workflow {
 	id: string;
 	user_id: string;
@@ -75,14 +201,6 @@ export interface CreateWorkflowRequest {
 	description?: string;
 	definition: Record<string, any>;
 	is_active?: boolean;
-}
-
-export interface AgentWorkflow {
-	id: string;
-	agent_id: string;
-	workflow_id: string;
-	is_primary: boolean;
-	created_at: string;
 }
 
 export interface Integration {

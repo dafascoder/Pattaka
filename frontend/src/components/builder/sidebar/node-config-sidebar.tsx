@@ -1,10 +1,17 @@
 import {
 	IconApi,
 	IconArrowRight,
+	IconCalculator,
 	IconClock,
+	IconCloud,
+	IconCode,
+	IconDatabase,
+	IconFile,
 	IconGitBranch,
 	IconLighter,
 	IconMail,
+	IconMessage,
+	IconMouse,
 	IconPlayerPlay,
 	IconPlus,
 	IconRobot,
@@ -13,6 +20,9 @@ import {
 	IconVariable,
 	IconWebhook,
 	IconX,
+	IconCopy,
+	IconEye,
+	IconEyeOff,
 } from "@tabler/icons-react";
 import type { Node } from "@xyflow/react";
 import { useEffect, useState } from "react";
@@ -29,19 +39,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-	Sidebar,
-	SidebarContent,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
-	SidebarHeader,
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	useSidebar,
-} from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 // Types
@@ -70,37 +69,118 @@ interface NodeConfigSidebarProps {
 	onClose: () => void;
 }
 
-// Node type configurations
+// Enhanced node type configurations with better categorization
 const NODE_TYPE_CONFIGS = {
+	// Triggers
 	trigger: {
 		icon: IconLighter,
 		color: "emerald",
 		label: "Trigger Configuration",
+		category: "Flow Control",
 	},
-	agent: {
-		icon: IconRobot,
+	manual: {
+		icon: IconMouse,
 		color: "blue",
-		label: "Agent Configuration",
+		label: "Manual Trigger",
+		category: "Triggers",
+	},
+	schedule: {
+		icon: IconClock,
+		color: "purple",
+		label: "Schedule Trigger",
+		category: "Triggers",
+	},
+	webhook: {
+		icon: IconWebhook,
+		color: "pink",
+		label: "Webhook Trigger",
+		category: "Triggers",
+	},
+	
+	// Actions - Communication
+	email: {
+		icon: IconMail,
+		color: "orange",
+		label: "Email Configuration",
+		category: "Communication",
+	},
+	slack: {
+		icon: IconMessage,
+		color: "green",
+		label: "Slack Configuration",
+		category: "Communication",
+	},
+	
+	// Actions - Data & APIs
+	http: {
+		icon: IconApi,
+		color: "purple",
+		label: "HTTP Request",
+		category: "Data & APIs",
 	},
 	api: {
 		icon: IconApi,
 		color: "purple",
 		label: "API Configuration",
+		category: "Data & APIs",
 	},
-	email: {
-		icon: IconMail,
-		color: "orange",
-		label: "Email Configuration",
+	database: {
+		icon: IconDatabase,
+		color: "indigo",
+		label: "Database Configuration",
+		category: "Data & APIs",
 	},
-	webhook: {
-		icon: IconWebhook,
-		color: "red",
-		label: "Webhook Configuration",
+	
+	// Actions - AI & Automation
+	openai: {
+		icon: IconRobot,
+		color: "blue",
+		label: "OpenAI Configuration",
+		category: "AI & Automation",
 	},
+	agent: {
+		icon: IconRobot,
+		color: "blue",
+		label: "Agent Configuration",
+		category: "AI & Automation",
+	},
+	
+	// Actions - Files & Data
+	file: {
+		icon: IconFile,
+		color: "gray",
+		label: "File Operations",
+		category: "Files & Data",
+	},
+	
+	// Actions - Utilities
+	calculator: {
+		icon: IconCalculator,
+		color: "cyan",
+		label: "Calculator",
+		category: "Utilities",
+	},
+	
+	// Flow Control
 	condition: {
 		icon: IconGitBranch,
 		color: "amber",
 		label: "Condition Configuration",
+		category: "Flow Control",
+	},
+	code: {
+		icon: IconCode,
+		color: "slate",
+		label: "Code Configuration",
+		category: "Development",
+	},
+	
+	// Cloud Services
+	cloud: {
+		icon: IconCloud,
+		color: "sky",
+		label: "Cloud Service",
+		category: "Cloud Services",
 	},
 } as const;
 
@@ -299,6 +379,8 @@ function TriggerConfig({
 	config: NodeConfig;
 	onSettingChange: (key: string, value: any) => void;
 }) {
+	const triggerType = config.settings.pieceType || config.settings.triggerType || 'manual';
+	
 	return (
 		<div className="space-y-4">
 			<div className="space-y-2">
@@ -307,7 +389,7 @@ function TriggerConfig({
 				</Label>
 				<Select
 					onValueChange={(value) => onSettingChange("triggerType", value)}
-					value={config.settings.triggerType || "manual"}
+					value={triggerType}
 				>
 					<SelectTrigger className="bg-background">
 						<SelectValue placeholder="Select trigger type" />
@@ -315,7 +397,7 @@ function TriggerConfig({
 					<SelectContent>
 						<SelectItem value="manual">
 							<div className="flex items-center gap-2">
-								<IconPlayerPlay className="h-4 w-4" />
+								<IconMouse className="h-4 w-4" />
 								Manual
 							</div>
 						</SelectItem>
@@ -331,17 +413,11 @@ function TriggerConfig({
 								Webhook
 							</div>
 						</SelectItem>
-						<SelectItem value="email">
-							<div className="flex items-center gap-2">
-								<IconMail className="h-4 w-4" />
-								Email
-							</div>
-						</SelectItem>
 					</SelectContent>
 				</Select>
 			</div>
 
-			{config.settings.triggerType === "schedule" && (
+			{triggerType === "schedule" && (
 				<div className="space-y-2">
 					<Label className="font-medium text-sm" htmlFor="cron">
 						Cron Expression
@@ -349,15 +425,713 @@ function TriggerConfig({
 					<Input
 						className="bg-background font-mono text-sm"
 						id="cron"
-						onChange={(e) => onSettingChange("cron", e.target.value)}
-						placeholder="0 0 * * *"
-						value={config.settings.cron || ""}
+						onChange={(e) => onSettingChange("cronExpression", e.target.value)}
+						placeholder="0 9 * * * (daily at 9 AM)"
+						value={config.settings.cronExpression || ""}
 					/>
 					<p className="text-muted-foreground text-xs">
-						Example: 0 0 * * * (daily at midnight)
+						Examples: 0 9 * * * (daily at 9 AM), 0 */6 * * * (every 6 hours)
 					</p>
 				</div>
 			)}
+
+			{triggerType === "webhook" && (
+				<div className="space-y-4">
+					<div className="space-y-2">
+						<Label className="font-medium text-sm" htmlFor="webhook-path">
+							Webhook Path
+						</Label>
+						<Input
+							className="bg-background font-mono text-sm"
+							id="webhook-path"
+							onChange={(e) => onSettingChange("path", e.target.value)}
+							placeholder="/webhook"
+							value={config.settings.path || ""}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label className="font-medium text-sm" htmlFor="webhook-method">
+							HTTP Method
+						</Label>
+						<Select
+							onValueChange={(value) => onSettingChange("method", value)}
+							value={config.settings.method || "POST"}
+						>
+							<SelectTrigger className="bg-background">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="GET">GET</SelectItem>
+								<SelectItem value="POST">POST</SelectItem>
+								<SelectItem value="PUT">PUT</SelectItem>
+								<SelectItem value="PATCH">PATCH</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function HttpConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="method">
+						Method
+					</Label>
+					<Select
+						onValueChange={(value) => onSettingChange("method", value)}
+						value={config.settings.method || "GET"}
+					>
+						<SelectTrigger className="bg-background">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="GET">GET</SelectItem>
+							<SelectItem value="POST">POST</SelectItem>
+							<SelectItem value="PUT">PUT</SelectItem>
+							<SelectItem value="DELETE">DELETE</SelectItem>
+							<SelectItem value="PATCH">PATCH</SelectItem>
+							<SelectItem value="HEAD">HEAD</SelectItem>
+							<SelectItem value="OPTIONS">OPTIONS</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="timeout">
+						Timeout (seconds)
+					</Label>
+					<Input
+						className="bg-background"
+						id="timeout"
+						type="number"
+						onChange={(e) => onSettingChange("timeout", parseInt(e.target.value) || 30)}
+						placeholder="30"
+						value={config.settings.timeout || ""}
+					/>
+				</div>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="url">
+					URL
+				</Label>
+				<Input
+					className="bg-background"
+					id="url"
+					onChange={(e) => onSettingChange("url", e.target.value)}
+					placeholder="https://api.example.com/endpoint"
+					value={config.settings.url || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="headers">
+					Headers (JSON)
+				</Label>
+				<Textarea
+					className="resize-none bg-background font-mono text-sm"
+					id="headers"
+					onChange={(e) => onSettingChange("headers", e.target.value)}
+					placeholder='{\n  "Authorization": "Bearer token",\n  "Content-Type": "application/json"\n}'
+					rows={4}
+					value={config.settings.headers || "{}"}
+				/>
+			</div>
+
+			{(config.settings.method === "POST" || config.settings.method === "PUT" || config.settings.method === "PATCH") && (
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="body">
+						Request Body
+					</Label>
+					<Textarea
+						className="resize-none bg-background font-mono text-sm"
+						id="body"
+						onChange={(e) => onSettingChange("body", e.target.value)}
+						placeholder='{\n  "key": "value"\n}'
+						rows={4}
+						value={config.settings.body || ""}
+					/>
+				</div>
+			)}
+
+			<div className="flex items-center space-x-2">
+				<Switch
+					id="follow-redirects"
+					checked={config.settings.followRedirects ?? true}
+					onCheckedChange={(checked) => onSettingChange("followRedirects", checked)}
+				/>
+				<Label htmlFor="follow-redirects" className="text-sm">
+					Follow redirects
+				</Label>
+			</div>
+		</div>
+	);
+}
+
+function EmailConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="to">
+						To
+					</Label>
+					<Input
+						className="bg-background"
+						id="to"
+						onChange={(e) => onSettingChange("to", e.target.value)}
+						placeholder="recipient@example.com"
+						value={config.settings.to || ""}
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="from">
+						From
+					</Label>
+					<Input
+						className="bg-background"
+						id="from"
+						onChange={(e) => onSettingChange("from", e.target.value)}
+						placeholder="sender@example.com"
+						value={config.settings.from || ""}
+					/>
+				</div>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="subject">
+					Subject
+				</Label>
+				<Input
+					className="bg-background"
+					id="subject"
+					onChange={(e) => onSettingChange("subject", e.target.value)}
+					placeholder="Email subject"
+					value={config.settings.subject || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="message">
+					Message
+				</Label>
+				<Textarea
+					className="resize-none bg-background"
+					id="message"
+					onChange={(e) => onSettingChange("body", e.target.value)}
+					placeholder="Email message content..."
+					rows={6}
+					value={config.settings.body || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="cc">
+					CC (optional)
+				</Label>
+				<Input
+					className="bg-background"
+					id="cc"
+					onChange={(e) => onSettingChange("cc", e.target.value)}
+					placeholder="cc@example.com"
+					value={config.settings.cc || ""}
+				/>
+			</div>
+
+			<div className="flex items-center space-x-2">
+				<Switch
+					id="html-format"
+					checked={config.settings.isHtml ?? false}
+					onCheckedChange={(checked) => onSettingChange("isHtml", checked)}
+				/>
+				<Label htmlFor="html-format" className="text-sm">
+					HTML format
+				</Label>
+			</div>
+		</div>
+	);
+}
+
+function DatabaseConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="db-type">
+					Database Type
+				</Label>
+				<Select
+					onValueChange={(value) => onSettingChange("dbType", value)}
+					value={config.settings.dbType || "postgres"}
+				>
+					<SelectTrigger className="bg-background">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="postgres">PostgreSQL</SelectItem>
+						<SelectItem value="mysql">MySQL</SelectItem>
+						<SelectItem value="sqlite">SQLite</SelectItem>
+						<SelectItem value="mongodb">MongoDB</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="connection-string">
+					Connection String
+				</Label>
+				<Input
+					className="bg-background font-mono text-sm"
+					id="connection-string"
+					onChange={(e) => onSettingChange("connectionString", e.target.value)}
+					placeholder="postgres://user:password@host:port/database"
+					type="password"
+					value={config.settings.connectionString || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="query">
+					SQL Query
+				</Label>
+				<Textarea
+					className="resize-none bg-background font-mono text-sm"
+					id="query"
+					onChange={(e) => onSettingChange("query", e.target.value)}
+					placeholder="SELECT * FROM users WHERE active = true"
+					rows={4}
+					value={config.settings.query || ""}
+				/>
+			</div>
+
+			<div className="flex items-center space-x-2">
+				<Switch
+					id="read-only"
+					checked={config.settings.readOnly ?? true}
+					onCheckedChange={(checked) => onSettingChange("readOnly", checked)}
+				/>
+				<Label htmlFor="read-only" className="text-sm">
+					Read-only query
+				</Label>
+			</div>
+		</div>
+	);
+}
+
+function OpenAIConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="api-key">
+					API Key
+				</Label>
+				<Input
+					className="bg-background font-mono text-sm"
+					id="api-key"
+					onChange={(e) => onSettingChange("apiKey", e.target.value)}
+					placeholder="sk-..."
+					type="password"
+					value={config.settings.apiKey || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="model">
+					Model
+				</Label>
+				<Select
+					onValueChange={(value) => onSettingChange("model", value)}
+					value={config.settings.model || "gpt-4o-mini"}
+				>
+					<SelectTrigger className="bg-background">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="gpt-4o">GPT-4o</SelectItem>
+						<SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+						<SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+						<SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="prompt">
+					Prompt
+				</Label>
+				<Textarea
+					className="resize-none bg-background"
+					id="prompt"
+					onChange={(e) => onSettingChange("prompt", e.target.value)}
+					placeholder="You are a helpful assistant..."
+					rows={4}
+					value={config.settings.prompt || ""}
+				/>
+			</div>
+
+			<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="temperature">
+						Temperature
+					</Label>
+					<Input
+						className="bg-background"
+						id="temperature"
+						type="number"
+						min="0"
+						max="2"
+						step="0.1"
+						onChange={(e) => onSettingChange("temperature", parseFloat(e.target.value) || 0.7)}
+						placeholder="0.7"
+						value={config.settings.temperature || ""}
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="max-tokens">
+						Max Tokens
+					</Label>
+					<Input
+						className="bg-background"
+						id="max-tokens"
+						type="number"
+						onChange={(e) => onSettingChange("maxTokens", parseInt(e.target.value) || 1000)}
+						placeholder="1000"
+						value={config.settings.maxTokens || ""}
+					/>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function SlackConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="webhook-url">
+					Webhook URL
+				</Label>
+				<Input
+					className="bg-background font-mono text-sm"
+					id="webhook-url"
+					onChange={(e) => onSettingChange("webhookUrl", e.target.value)}
+					placeholder="https://hooks.slack.com/services/..."
+					type="password"
+					value={config.settings.webhookUrl || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="channel">
+					Channel
+				</Label>
+				<Input
+					className="bg-background"
+					id="channel"
+					onChange={(e) => onSettingChange("channel", e.target.value)}
+					placeholder="#general"
+					value={config.settings.channel || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="username">
+					Username
+				</Label>
+				<Input
+					className="bg-background"
+					id="username"
+					onChange={(e) => onSettingChange("username", e.target.value)}
+					placeholder="Workflow Bot"
+					value={config.settings.username || ""}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="message">
+					Message
+				</Label>
+				<Textarea
+					className="resize-none bg-background"
+					id="message"
+					onChange={(e) => onSettingChange("text", e.target.value)}
+					placeholder="Hello from the workflow!"
+					rows={4}
+					value={config.settings.text || ""}
+				/>
+			</div>
+		</div>
+	);
+}
+
+function FileConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="operation">
+					Operation
+				</Label>
+				<Select
+					onValueChange={(value) => onSettingChange("operation", value)}
+					value={config.settings.operation || "read"}
+				>
+					<SelectTrigger className="bg-background">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="read">Read File</SelectItem>
+						<SelectItem value="write">Write File</SelectItem>
+						<SelectItem value="append">Append to File</SelectItem>
+						<SelectItem value="delete">Delete File</SelectItem>
+						<SelectItem value="copy">Copy File</SelectItem>
+						<SelectItem value="move">Move File</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="file-path">
+					File Path
+				</Label>
+				<Input
+					className="bg-background font-mono text-sm"
+					id="file-path"
+					onChange={(e) => onSettingChange("filePath", e.target.value)}
+					placeholder="/path/to/file.txt"
+					value={config.settings.filePath || ""}
+				/>
+			</div>
+
+			{(config.settings.operation === "write" || config.settings.operation === "append") && (
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="content">
+						Content
+					</Label>
+					<Textarea
+						className="resize-none bg-background font-mono text-sm"
+						id="content"
+						onChange={(e) => onSettingChange("content", e.target.value)}
+						placeholder="File content..."
+						rows={4}
+						value={config.settings.content || ""}
+					/>
+				</div>
+			)}
+
+			{(config.settings.operation === "copy" || config.settings.operation === "move") && (
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="destination">
+						Destination Path
+					</Label>
+					<Input
+						className="bg-background font-mono text-sm"
+						id="destination"
+						onChange={(e) => onSettingChange("destinationPath", e.target.value)}
+						placeholder="/path/to/destination.txt"
+						value={config.settings.destinationPath || ""}
+					/>
+				</div>
+			)}
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="encoding">
+					Encoding
+				</Label>
+				<Select
+					onValueChange={(value) => onSettingChange("encoding", value)}
+					value={config.settings.encoding || "utf8"}
+				>
+					<SelectTrigger className="bg-background">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="utf8">UTF-8</SelectItem>
+						<SelectItem value="ascii">ASCII</SelectItem>
+						<SelectItem value="base64">Base64</SelectItem>
+						<SelectItem value="binary">Binary</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+		</div>
+	);
+}
+
+function CalculatorConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="operation">
+					Operation
+				</Label>
+				<Select
+					onValueChange={(value) => onSettingChange("operation", value)}
+					value={config.settings.operation || "add"}
+				>
+					<SelectTrigger className="bg-background">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="add">Addition (+)</SelectItem>
+						<SelectItem value="subtract">Subtraction (-)</SelectItem>
+						<SelectItem value="multiply">Multiplication (×)</SelectItem>
+						<SelectItem value="divide">Division (÷)</SelectItem>
+						<SelectItem value="power">Power (^)</SelectItem>
+						<SelectItem value="sqrt">Square Root</SelectItem>
+						<SelectItem value="abs">Absolute Value</SelectItem>
+						<SelectItem value="round">Round</SelectItem>
+						<SelectItem value="floor">Floor</SelectItem>
+						<SelectItem value="ceil">Ceiling</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-2">
+					<Label className="font-medium text-sm" htmlFor="value1">
+						Value 1
+					</Label>
+					<Input
+						className="bg-background"
+						id="value1"
+						type="number"
+						onChange={(e) => onSettingChange("value1", parseFloat(e.target.value) || 0)}
+						placeholder="0"
+						value={config.settings.value1 || ""}
+					/>
+				</div>
+				{!["sqrt", "abs", "round", "floor", "ceil"].includes(config.settings.operation) && (
+					<div className="space-y-2">
+						<Label className="font-medium text-sm" htmlFor="value2">
+							Value 2
+						</Label>
+						<Input
+							className="bg-background"
+							id="value2"
+							type="number"
+							onChange={(e) => onSettingChange("value2", parseFloat(e.target.value) || 0)}
+							placeholder="0"
+							value={config.settings.value2 || ""}
+						/>
+					</div>
+				)}
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="precision">
+					Decimal Precision
+				</Label>
+				<Input
+					className="bg-background"
+					id="precision"
+					type="number"
+					min="0"
+					max="10"
+					onChange={(e) => onSettingChange("precision", parseInt(e.target.value) || 2)}
+					placeholder="2"
+					value={config.settings.precision || ""}
+				/>
+			</div>
+		</div>
+	);
+}
+
+function CodeConfig({
+	config,
+	onSettingChange,
+}: {
+	config: NodeConfig;
+	onSettingChange: (key: string, value: any) => void;
+}) {
+	return (
+		<div className="space-y-4">
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="language">
+					Language
+				</Label>
+				<Select
+					onValueChange={(value) => onSettingChange("language", value)}
+					value={config.settings.language || "javascript"}
+				>
+					<SelectTrigger className="bg-background">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="javascript">JavaScript</SelectItem>
+						<SelectItem value="python">Python</SelectItem>
+						<SelectItem value="typescript">TypeScript</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="space-y-2">
+				<Label className="font-medium text-sm" htmlFor="code">
+					Code
+				</Label>
+				<Textarea
+					className="resize-none bg-background font-mono text-sm"
+					id="code"
+					onChange={(e) => onSettingChange("code", e.target.value)}
+					placeholder="// Your code here\nreturn { result: 'Hello World!' };"
+					rows={8}
+					value={config.settings.code || ""}
+				/>
+			</div>
+
+			<div className="flex items-center space-x-2">
+				<Switch
+					id="async-execution"
+					checked={config.settings.async ?? false}
+					onCheckedChange={(checked) => onSettingChange("async", checked)}
+				/>
+				<Label htmlFor="async-execution" className="text-sm">
+					Async execution
+				</Label>
+			</div>
 		</div>
 	);
 }
@@ -423,133 +1197,6 @@ function AgentConfig({
 						</SelectItem>
 					</SelectContent>
 				</Select>
-			</div>
-		</div>
-	);
-}
-
-function ApiConfig({
-	config,
-	onSettingChange,
-}: {
-	config: NodeConfig;
-	onSettingChange: (key: string, value: any) => void;
-}) {
-	return (
-		<div className="space-y-4">
-			<div className="grid grid-cols-2 gap-3">
-				<div className="space-y-2">
-					<Label className="font-medium text-sm" htmlFor="method">
-						Method
-					</Label>
-					<Select
-						onValueChange={(value) => onSettingChange("method", value)}
-						value={config.settings.method || "GET"}
-					>
-						<SelectTrigger className="bg-background">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="GET">GET</SelectItem>
-							<SelectItem value="POST">POST</SelectItem>
-							<SelectItem value="PUT">PUT</SelectItem>
-							<SelectItem value="DELETE">DELETE</SelectItem>
-							<SelectItem value="PATCH">PATCH</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="space-y-2">
-					<Label className="font-medium text-sm" htmlFor="url">
-						URL
-					</Label>
-					<Input
-						className="bg-background"
-						id="url"
-						onChange={(e) => onSettingChange("url", e.target.value)}
-						placeholder="https://api.example.com"
-						value={config.settings.url || ""}
-					/>
-				</div>
-			</div>
-
-			<div className="space-y-2">
-				<Label className="font-medium text-sm" htmlFor="headers">
-					Headers (JSON)
-				</Label>
-				<Textarea
-					className="resize-none bg-background font-mono text-sm"
-					id="headers"
-					onChange={(e) => onSettingChange("headers", e.target.value)}
-					placeholder='{"Authorization": "Bearer token"}'
-					rows={3}
-					value={config.settings.headers || "{}"}
-				/>
-			</div>
-
-			<div className="space-y-2">
-				<Label className="font-medium text-sm" htmlFor="body">
-					Request Body
-				</Label>
-				<Textarea
-					className="resize-none bg-background"
-					id="body"
-					onChange={(e) => onSettingChange("body", e.target.value)}
-					placeholder="Request body (for POST/PUT requests)"
-					rows={3}
-					value={config.settings.body || ""}
-				/>
-			</div>
-		</div>
-	);
-}
-
-function EmailConfig({
-	config,
-	onSettingChange,
-}: {
-	config: NodeConfig;
-	onSettingChange: (key: string, value: any) => void;
-}) {
-	return (
-		<div className="space-y-4">
-			<div className="space-y-2">
-				<Label className="font-medium text-sm" htmlFor="to">
-					To
-				</Label>
-				<Input
-					className="bg-background"
-					id="to"
-					onChange={(e) => onSettingChange("to", e.target.value)}
-					placeholder="recipient@example.com"
-					value={config.settings.to || ""}
-				/>
-			</div>
-
-			<div className="space-y-2">
-				<Label className="font-medium text-sm" htmlFor="subject">
-					Subject
-				</Label>
-				<Input
-					className="bg-background"
-					id="subject"
-					onChange={(e) => onSettingChange("subject", e.target.value)}
-					placeholder="Email subject"
-					value={config.settings.subject || ""}
-				/>
-			</div>
-
-			<div className="space-y-2">
-				<Label className="font-medium text-sm" htmlFor="message">
-					Message
-				</Label>
-				<Textarea
-					className="resize-none bg-background"
-					id="message"
-					onChange={(e) => onSettingChange("body", e.target.value)}
-					placeholder="Email message content..."
-					rows={4}
-					value={config.settings.body || ""}
-				/>
 			</div>
 		</div>
 	);
@@ -652,7 +1299,13 @@ function ConditionConfig({
 									<SelectItem value="not_equals">Not Equals</SelectItem>
 									<SelectItem value="greater_than">Greater Than</SelectItem>
 									<SelectItem value="less_than">Less Than</SelectItem>
+									<SelectItem value="greater_equal">Greater or Equal</SelectItem>
+									<SelectItem value="less_equal">Less or Equal</SelectItem>
 									<SelectItem value="contains">Contains</SelectItem>
+									<SelectItem value="starts_with">Starts With</SelectItem>
+									<SelectItem value="ends_with">Ends With</SelectItem>
+									<SelectItem value="is_empty">Is Empty</SelectItem>
+									<SelectItem value="is_not_empty">Is Not Empty</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -689,6 +1342,57 @@ function ConditionConfig({
 	);
 }
 
+// Helper function to get the correct configuration component
+function getConfigComponent(stepType: string, pieceType?: string) {
+	// Determine the node type for configuration
+	const nodeType = pieceType || stepType?.toLowerCase();
+	
+	switch (nodeType) {
+		case 'trigger':
+		case 'manual':
+		case 'schedule':
+		case 'webhook':
+			return TriggerConfig;
+		case 'http':
+		case 'api':
+			return HttpConfig;
+		case 'email':
+			return EmailConfig;
+		case 'database':
+		case 'sql':
+		case 'postgres':
+		case 'mysql':
+			return DatabaseConfig;
+		case 'openai':
+		case 'anthropic':
+		case 'llm':
+			return OpenAIConfig;
+		case 'slack':
+		case 'discord':
+		case 'teams':
+			return SlackConfig;
+		case 'file':
+		case 'csv':
+		case 'json':
+			return FileConfig;
+		case 'calculator':
+		case 'math':
+			return CalculatorConfig;
+		case 'code':
+			return CodeConfig;
+		case 'agent':
+			return AgentConfig;
+		case 'condition':
+		case 'branch':
+			return ConditionConfig;
+		default:
+			return null;
+	}
+}
+
+
+
+// Main NodeConfigSidebar component
 export function NodeConfigSidebar({
 	node,
 	nodes,
@@ -697,277 +1401,251 @@ export function NodeConfigSidebar({
 	onDelete,
 	onClose,
 }: NodeConfigSidebarProps) {
-	const nodeConfig = node?.data?.config as NodeConfig | undefined;
 	const [config, setConfig] = useState<NodeConfig>({
-		name: nodeConfig?.name || (node?.data?.label as string) || "",
-		description: nodeConfig?.description || "",
-		settings: nodeConfig?.settings || {},
+		name: "",
+		description: "",
+		settings: {},
 	});
-	const { state } = useSidebar();
-
-	// Sync config when node changes
+	// Update config when node changes
 	useEffect(() => {
-		console.log('NodeConfigSidebar: Node changed', {
-			nodeId: node?.id,
-			hasData: !!node?.data,
-			nodeType: node?.data?.nodeType,
-			hasConfig: !!node?.data?.config
-		});
-		
 		if (node?.data) {
-			const nodeConfig = node.data.config as NodeConfig | undefined;
+			const nodeData = node.data as any;
 			setConfig({
-				name: nodeConfig?.name || (node.data.label as string) || "",
-				description: nodeConfig?.description || "",
-				settings: nodeConfig?.settings || {},
-			});
-		} else {
-			// Reset config when no node is selected
-			setConfig({
-				name: "",
-				description: "",
-				settings: {},
+				name: nodeData.displayName || nodeData.stepName || "",
+				description: nodeData.description || "",
+				settings: nodeData.settings || {},
 			});
 		}
-	}, [node?.id, node?.data?.config, node?.data?.label]); // Dependencies to track changes
+	}, [node]);
 
-	const nodeType = node?.data.nodeType as keyof typeof NODE_TYPE_CONFIGS;
-	const nodeTypeConfig = node ? NODE_TYPE_CONFIGS[nodeType] : null;
-
-	const handleConfigChange = (field: string, value: any) => {
-		const newConfig = { ...config, [field]: value };
-		setConfig(newConfig);
-		onUpdate(newConfig);
-	};
-
-	const handleSettingChange = (key: string, value: any) => {
-		const newSettings = { ...config.settings, [key]: value };
-		const newConfig = { ...config, settings: newSettings };
-		setConfig(newConfig);
-		onUpdate(newConfig);
-	};
-
-	const renderNodeTypeSettings = () => {
-		if (!node) return null;
-
-		const props = { config, onSettingChange: handleSettingChange };
-
-		switch (nodeType) {
-			case "trigger":
-				return <TriggerConfig {...props} />;
-			case "agent":
-				return <AgentConfig {...props} />;
-			case "api":
-				return <ApiConfig {...props} />;
-			case "email":
-				return <EmailConfig {...props} />;
-			case "webhook":
-				return <WebhookConfig {...props} />;
-			case "condition":
-				return <ConditionConfig {...props} />;
-			default:
-				return (
-					<div className="py-8 text-center">
-						<p className="text-muted-foreground text-sm">
-							No specific settings for this node type
-						</p>
-					</div>
-				);
-		}
-	};
-
-	// If no node is selected, show a default state
-	if (!node) {
-		return (
-			<Sidebar
-				className="sticky top-0 hidden h-svh border-l lg:flex"
-				collapsible="none"
-			>
-				<SidebarContent className="gap-0">
-					<SidebarHeader className="border-border/40 border-b bg-muted/30 px-4 py-3">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<IconSettings className="h-4 w-4" />
-								<h3 className="font-semibold text-sm">
-									{state === "expanded" ? "Configuration" : ""}
-								</h3>
-							</div>
-							<Button
-								className="h-8 w-8"
-								onClick={onClose}
-								size="icon"
-								variant="ghost"
-							>
-								<IconX className="h-4 w-4" />
-							</Button>
-						</div>
-					</SidebarHeader>
-
-					<div className="flex flex-1 items-center justify-center p-8">
-						<div className="space-y-4 text-center">
-							<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
-								<IconSettings className="h-8 w-8 text-muted-foreground/50" />
-							</div>
-							{state === "expanded" && (
-								<>
-									<h3 className="font-medium text-foreground text-sm">
-										No Step Selected
-									</h3>
-									<p className="max-w-[200px] text-muted-foreground text-xs">
-										Select a step in your workflow to configure its settings and
-										variables.
-									</p>
-								</>
-							)}
-						</div>
-					</div>
-				</SidebarContent>
-			</Sidebar>
-		);
+	if (!node || !selectedNodeId) {
+		return null;
 	}
 
+	const nodeData = node.data as any;
+	const stepType = nodeData.stepType || "action";
+	const pieceType = nodeData.settings?.pieceType;
+	const nodeTypeKey = (pieceType || stepType).toLowerCase();
+	const nodeTypeConfig = NODE_TYPE_CONFIGS[nodeTypeKey as keyof typeof NODE_TYPE_CONFIGS] || NODE_TYPE_CONFIGS.trigger;
+
+	const Icon = nodeTypeConfig.icon;
+	const ConfigComponent = getConfigComponent(stepType, pieceType);
+
+	const handleSettingChange = (key: string, value: any) => {
+		const updatedSettings = { ...config.settings, [key]: value };
+		const updatedConfig = { ...config, settings: updatedSettings };
+		setConfig(updatedConfig);
+		
+		// Update the node data
+		onUpdate({
+			...node.data,
+			settings: updatedSettings,
+		});
+	};
+
+	const handleBasicChange = (field: keyof NodeConfig, value: string) => {
+		const updatedConfig = { ...config, [field]: value };
+		setConfig(updatedConfig);
+		
+		// Update the node data
+		onUpdate({
+			...node.data,
+			[field === 'name' ? 'displayName' : field]: value,
+		});
+	};
+
+	const handleSkipToggle = () => {
+		const skip = !config.settings.skip;
+		handleSettingChange("skip", skip);
+	};
+
+	const handleCopyNode = () => {
+		// TODO: Implement copy functionality
+		console.log("Copy node:", node.id);
+	};
+
+	const handleDeleteNode = () => {
+		onDelete();
+		onClose();
+	};
+
+
+
 	return (
-		<Sidebar
-			className={cn(
-				"border-border/40 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-				"transition-all duration-300 ease-in-out"
-			)}
-			collapsible="icon"
-			side="right"
-			variant="sidebar"
-		>
-			<SidebarContent className="gap-0">
-				<SidebarHeader className="border-border/40 border-b bg-muted/30 px-4 py-3">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<IconSettings className="h-4 w-4" />
-							<h3 className="font-semibold text-sm">
-								{state === "expanded"
-									? `Step: ${config.name || "Unnamed"}`
-									: ""}
-							</h3>
+		<div className="h-full flex flex-col bg-background border-l">
+			{/* Header */}
+			<div className="flex-shrink-0 p-4 border-b bg-muted/30">
+				<div className="flex items-center justify-between mb-3">
+					<div className="flex items-center gap-2">
+						<div className={cn("p-1.5 rounded-md", nodeTypeConfig.color)}>
+							<Icon className="h-4 w-4" />
 						</div>
+						<div>
+							<h3 className="font-semibold text-sm">{nodeTypeConfig.label}</h3>
+							<p className="text-muted-foreground text-xs">{nodeTypeConfig.category}</p>
+						</div>
+					</div>
+					<div className="flex items-center gap-1">
 						<Button
-							className="h-8 w-8"
-							onClick={onClose}
-							size="icon"
 							variant="ghost"
+							size="sm"
+							onClick={handleSkipToggle}
+							className="h-7 w-7 p-0"
+							title={config.settings.skip ? "Enable step" : "Skip step"}
 						>
-							<IconX className="h-4 w-4" />
+							{config.settings.skip ? (
+								<IconEyeOff className="h-3 w-3" />
+							) : (
+								<IconEye className="h-3 w-3" />
+							)}
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={handleCopyNode}
+							className="h-7 w-7 p-0"
+							title="Copy node"
+						>
+							<IconCopy className="h-3 w-3" />
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={onClose}
+							className="h-7 w-7 p-0"
+						>
+							<IconX className="h-3 w-3" />
 						</Button>
 					</div>
-				</SidebarHeader>
+				</div>
 
-				{/* Basic Configuration */}
-				<SidebarGroup className="px-2 py-3">
-					<SidebarGroupLabel className="px-2 font-semibold text-muted-foreground/80 text-xs uppercase tracking-wider">
-						Basic Settings
-					</SidebarGroupLabel>
-					<SidebarGroupContent className="mt-2 px-2">
-						<div className="space-y-4">
+				{/* Status indicators */}
+				<div className="flex items-center gap-2">
+					{config.settings.skip && (
+						<Badge variant="secondary" className="text-xs">
+							<IconEyeOff className="h-3 w-3 mr-1" />
+							Skipped
+						</Badge>
+					)}
+					<Badge variant="outline" className="text-xs">
+						{stepType === 'trigger' ? 'Trigger' : 'Action'}
+					</Badge>
+					{pieceType && (
+						<Badge variant="outline" className="text-xs">
+							{pieceType}
+						</Badge>
+					)}
+				</div>
+			</div>
+
+			{/* Content */}
+			<div className="flex-1 overflow-y-auto">
+				<div className="p-4 space-y-6">
+					{/* Basic Settings */}
+					<Card>
+						<CardHeader className="pb-3">
+							<CardTitle className="text-sm flex items-center gap-2">
+								<IconSettings className="h-4 w-4" />
+								Basic Settings
+							</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
 							<div className="space-y-2">
 								<Label className="font-medium text-sm" htmlFor="node-name">
-									Step Title
+									Display Name
 								</Label>
 								<Input
 									className="bg-background"
 									id="node-name"
-									onChange={(e) => handleConfigChange("name", e.target.value)}
 									value={config.name}
+									onChange={(e) => handleBasicChange("name", e.target.value)}
+									placeholder="Enter display name"
 								/>
 							</div>
-
 							<div className="space-y-2">
-								<Label
-									className="font-medium text-sm"
-									htmlFor="node-description"
-								>
-									Step Description
+								<Label className="font-medium text-sm" htmlFor="node-description">
+									Description
 								</Label>
 								<Textarea
 									className="resize-none bg-background"
 									id="node-description"
-									onChange={(e) =>
-										handleConfigChange("description", e.target.value)
-									}
-									rows={3}
 									value={config.description}
+									onChange={(e) => handleBasicChange("description", e.target.value)}
+									placeholder="Enter description (optional)"
+									rows={2}
 								/>
 							</div>
-						</div>
-					</SidebarGroupContent>
-				</SidebarGroup>
+						</CardContent>
+					</Card>
 
-				{/* Node Type Specific Configuration */}
-				{nodeTypeConfig && (
-					<SidebarGroup className="border-border/20 border-t px-2 py-3">
-						<SidebarGroupLabel className="flex items-center gap-2 px-2 font-semibold text-muted-foreground/80 text-xs uppercase tracking-wider">
-							<nodeTypeConfig.icon className="h-3 w-3" />
-							{nodeTypeConfig.label}
-						</SidebarGroupLabel>
-						<SidebarGroupContent className="mt-2 px-2">
-							<Card
-								className={cn(
-									"border transition-all duration-200",
-									`border-${nodeTypeConfig.color}-200 bg-${nodeTypeConfig.color}-50/30`
-								)}
-							>
-								<CardContent className="p-4">
-									{renderNodeTypeSettings()}
-								</CardContent>
-							</Card>
-						</SidebarGroupContent>
-					</SidebarGroup>
-				)}
-
-				{/* Variables Configuration */}
-				<SidebarGroup className="border-border/20 border-t px-2 py-3">
-					<SidebarGroupLabel className="flex items-center gap-2 px-2 font-semibold text-muted-foreground/80 text-xs uppercase tracking-wider">
-						<IconVariable className="h-3 w-3" />
-						Variables
-					</SidebarGroupLabel>
-					<SidebarGroupContent className="mt-2 px-2">
-						<Card className="border-slate-200 bg-slate-50/30">
-							<CardContent className="space-y-6 p-4">
-								<VariableManager
-									nodes={nodes}
-									onChange={(variables) =>
-										handleSettingChange("inputVariables", variables)
-									}
-									selectedNodeId={selectedNodeId || undefined}
-									type="input"
-									variables={config.settings.inputVariables || []}
-								/>
-
-								<Separator />
-
-								<VariableManager
-									onChange={(variables) =>
-										handleSettingChange("outputVariables", variables)
-									}
-									type="output"
-									variables={config.settings.outputVariables || []}
+					{/* Type-specific Configuration */}
+					{ConfigComponent && (
+						<Card>
+							<CardHeader className="pb-3">
+								<CardTitle className="text-sm flex items-center gap-2">
+									<Icon className="h-4 w-4" />
+									Configuration
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<ConfigComponent
+									config={config}
+									onSettingChange={handleSettingChange}
 								/>
 							</CardContent>
 						</Card>
-					</SidebarGroupContent>
-				</SidebarGroup>
+					)}
 
-				{/* Delete Action */}
-				<SidebarGroup className="mt-auto border-border/20 border-t px-2 py-3">
-					<SidebarGroupContent className="px-2">
-						<Button
-							className="h-9 w-full"
-							onClick={onDelete}
-							size="sm"
-							variant="destructive"
-						>
-							<IconTrash className="mr-2 h-4 w-4" />
-							{state === "expanded" ? "Delete Step" : ""}
-						</Button>
-					</SidebarGroupContent>
-				</SidebarGroup>
-			</SidebarContent>
-		</Sidebar>
+					{/* Variable Management */}
+					<Card>
+						<CardHeader className="pb-3">
+							<CardTitle className="text-sm flex items-center gap-2">
+								<IconVariable className="h-4 w-4" />
+								Variables
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<VariableManager
+								variables={config.settings.inputVariables || []}
+								type="input"
+								nodes={nodes}
+								selectedNodeId={selectedNodeId || undefined}
+								onChange={(vars) => handleSettingChange("inputVariables", vars)}
+							/>
+							<Separator className="my-4" />
+							<VariableManager
+								variables={config.settings.outputVariables || []}
+								type="output"
+								onChange={(vars) => handleSettingChange("outputVariables", vars)}
+							/>
+						</CardContent>
+					</Card>
+				</div>
+			</div>
+
+			{/* Footer */}
+			<div className="flex-shrink-0 p-4 border-t bg-muted/30">
+				<div className="flex items-center justify-between">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={handleCopyNode}
+						className="flex items-center gap-2"
+					>
+						<IconCopy className="h-3 w-3" />
+						Duplicate
+					</Button>
+					<Button
+						variant="destructive"
+						size="sm"
+						onClick={handleDeleteNode}
+						className="flex items-center gap-2"
+					>
+						<IconTrash className="h-3 w-3" />
+						Delete
+					</Button>
+				</div>
+			</div>
+		</div>
 	);
 }

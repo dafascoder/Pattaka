@@ -135,7 +135,7 @@ export const authMiddleware = createMiddleware({
 	// If no user found, redirect to login
 	if (!user) {
 		authLogger.info("Auth middleware - No user found, redirecting to login");
-		throw redirect({ to: "/login" });
+		throw redirect({ to: "/auth/login" });
 	}
 
 	authLogger.info(
@@ -154,7 +154,7 @@ export const requireAuth = async () => {
 
 	if (!user) {
 		authLogger.info("Route auth check - No user found, redirecting to login");
-		throw redirect({ to: "/login" });
+		throw redirect({ to: "/auth/login" });
 	}
 
 	authLogger.info("Route auth check - User authenticated, proceeding");

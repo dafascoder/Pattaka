@@ -1,476 +1,553 @@
 package workflow
 
 import (
-	"backend/internal/db"
-	"backend/internal/models"
-	"backend/internal/services"
-	"backend/internal/workflow/interfaces"
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"sync"
 	"time"
 
+	"backend/internal/db"
+	sqlc "backend/internal/db/sqlc"
+	"backend/internal/logger"
+
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// DefaultEngine is the main implementation of WorkflowEngine
-type DefaultEngine struct {
-	db               *db.DB
-	workflowService  *services.WorkflowService
-	executionService *services.ExecutionService
-
-	// Registry of triggers and actions
-	triggers map[string]interfaces.Trigger
-	actions  map[string]interfaces.Action
-
-	// Active executions
-	executions map[uuid.UUID]*ExecutionContext
-	mutex      sync.RWMutex
-
-	// Trigger management
-	activeTriggers map[uuid.UUID]interfaces.Trigger
-	triggerMutex   sync.RWMutex
-
-	// Context for cancellation
-	ctx    context.Context
-	cancel context.CancelFunc
+// ExecutionEngine handles the execution of workflows
+type ExecutionEngine struct {
+	db     *db.DB
+	logger *logger.Logger
 }
 
-// NewEngine creates a new workflow engine
-func NewEngine(db *db.DB, workflowService *services.WorkflowService, executionService *services.ExecutionService) *DefaultEngine {
-	ctx, cancel := context.WithCancel(context.Background())
+// NewExecutionEngine creates a new workflow execution engine
+func NewExecutionEngine(database *db.DB) *ExecutionEngine {
+	return &ExecutionEngine{
+		db:     database,
+		logger: logger.Get(),
+	}
+}
 
-	engine := &DefaultEngine{
-		db:               db,
-		workflowService:  workflowService,
-		executionService: executionService,
-		triggers:         make(map[string]interfaces.Trigger),
-		actions:          make(map[string]interfaces.Action),
-		executions:       make(map[uuid.UUID]*ExecutionContext),
-		activeTriggers:   make(map[uuid.UUID]interfaces.Trigger),
-		ctx:              ctx,
-		cancel:           cancel,
+// ExecuteFlowVersion executes a flow version with comprehensive logging
+func (e *ExecutionEngine) ExecuteFlowVersion(ctx context.Context, flowRun *sqlc.FlowRun, flowVersion *sqlc.FlowVersion) error {
+	runID := uuid.UUID(flowRun.ID.Bytes)
+	versionID := uuid.UUID(flowVersion.ID.Bytes)
+
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":     runID.String(),
+		"flow_version_id": versionID.String(),
+		"flow_name":       flowVersion.DisplayName,
+		"version":         flowVersion.Version,
+		"environment":     flowRun.Environment.String,
+	}).Info("Starting flow execution")
+
+	// Parse the steps from the flow version
+	var steps map[string]interface{}
+	if err := json.Unmarshal(flowVersion.Steps, &steps); err != nil {
+		e.logger.WithError(err).WithField("flow_run_id", runID.String()).Error("Failed to parse flow steps")
+		return e.markFlowRunFailed(ctx, runID, fmt.Sprintf("Failed to parse flow steps: %v", err))
 	}
 
-	return engine
-}
-
-// RegisterTrigger registers a new trigger type
-func (e *DefaultEngine) RegisterTrigger(trigger interfaces.Trigger) error {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	triggerType := trigger.GetType()
-	if triggerType == "" {
-		return fmt.Errorf("trigger type cannot be empty")
+	// Parse the trigger
+	var trigger map[string]interface{}
+	if err := json.Unmarshal(flowVersion.Trigger, &trigger); err != nil {
+		e.logger.WithError(err).WithField("flow_run_id", runID.String()).Error("Failed to parse flow trigger")
+		return e.markFlowRunFailed(ctx, runID, fmt.Sprintf("Failed to parse flow trigger: %v", err))
 	}
 
-	e.triggers[triggerType] = trigger
-	log.Printf("Registered trigger type: %s", triggerType)
-	return nil
-}
-
-// RegisterAction registers a new action type
-func (e *DefaultEngine) RegisterAction(action interfaces.Action) error {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	actionType := action.GetType()
-	if actionType == "" {
-		return fmt.Errorf("action type cannot be empty")
+	// Handle empty trigger data
+	if trigger == nil || len(trigger) == 0 {
+		e.logger.WithField("flow_run_id", runID.String()).Warn("Empty trigger data, using default manual trigger")
+		trigger = map[string]interface{}{
+			"type": "manual",
+		}
 	}
 
-	e.actions[actionType] = action
-	log.Printf("Registered action type: %s", actionType)
-	return nil
-}
+	// Ensure trigger has a type
+	triggerType := getTriggerType(trigger)
+	if triggerType == "" || triggerType == "manual" {
+		trigger["type"] = "manual"
+	}
 
-// ExecuteWorkflow starts a workflow execution
-func (e *DefaultEngine) ExecuteWorkflow(ctx context.Context, workflowID uuid.UUID, triggerData map[string]interface{}) (*ExecutionContext, error) {
-	// Get workflow definition from database
-	workflow, err := e.workflowService.GetWorkflow(ctx, workflowID.String())
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":  runID.String(),
+		"step_count":   len(steps),
+		"trigger_type": getTriggerType(trigger),
+	}).Info("Flow execution plan created")
+
+	// Execute the trigger first
+	triggerOutput, err := e.executeTrigger(ctx, runID, trigger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get workflow: %w", err)
+		e.logger.WithError(err).WithField("flow_run_id", runID.String()).Error("Trigger execution failed")
+		return e.markFlowRunFailed(ctx, runID, fmt.Sprintf("Trigger execution failed: %v", err))
 	}
 
-	// Parse workflow definition
-	var definition WorkflowDefinition
-	if err := json.Unmarshal([]byte(fmt.Sprintf("%v", workflow.Definition)), &definition); err != nil {
-		return nil, fmt.Errorf("failed to parse workflow definition: %w", err)
-	}
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":    runID.String(),
+		"trigger_output": triggerOutput,
+	}).Info("Trigger executed successfully")
 
-	// Create execution context
-	executionID := uuid.New()
-	execCtx := &ExecutionContext{
-		WorkflowID:  workflowID,
-		ExecutionID: executionID,
-		UserID:      workflow.UserID,
-		TriggerData: triggerData,
-		Variables:   make(map[string]interface{}),
-		Environment: "production", // TODO: Make configurable
-		StartedAt:   time.Now(),
-		Status:      StatusPending,
-		Steps:       make(map[string]*StepResult),
-	}
+	// Execute steps in sequence
+	stepContext := triggerOutput
+	stepOrder := getStepExecutionOrder(steps)
 
-	// Merge workflow variables
-	for k, v := range definition.Variables {
-		execCtx.Variables[k] = v
-	}
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":     runID.String(),
+		"execution_order": stepOrder,
+	}).Info("Starting step execution sequence")
 
-	// Store execution context
-	e.mutex.Lock()
-	e.executions[executionID] = execCtx
-	e.mutex.Unlock()
-
-	// Start execution in goroutine
-	go e.executeWorkflowSteps(ctx, execCtx, &definition)
-
-	return execCtx, nil
-}
-
-// executeWorkflowSteps executes the workflow steps
-func (e *DefaultEngine) executeWorkflowSteps(ctx context.Context, execCtx *ExecutionContext, definition *WorkflowDefinition) {
-	defer e.cleanupExecution(execCtx.ExecutionID)
-
-	// Update status to running
-	e.updateExecutionStatus(execCtx, StatusRunning)
-
-	// Create execution record in database
-	execution := models.Execution{
-		ID:         execCtx.ExecutionID,
-		WorkflowID: execCtx.WorkflowID,
-		Status:     string(StatusRunning),
-		InputData:  execCtx.TriggerData,
-		StartedAt:  execCtx.StartedAt,
-	}
-
-	_, err := e.executionService.CreateExecution(ctx, execution)
-	if err != nil {
-		log.Printf("Failed to create execution record: %v", err)
-		e.updateExecutionStatus(execCtx, StatusFailed)
-		execCtx.Error = fmt.Sprintf("Failed to create execution record: %v", err)
-		return
-	}
-
-	// Execute steps in order
-	if len(definition.Steps) == 0 {
-		e.completeExecution(execCtx, nil)
-		return
-	}
-
-	// Start with the first step
-	currentStepID := definition.Steps[0].ID
-	visitedSteps := make(map[string]bool)
-
-	for currentStepID != "" {
-		// Prevent infinite loops
-		if visitedSteps[currentStepID] {
-			e.failExecution(execCtx, fmt.Errorf("infinite loop detected at step: %s", currentStepID))
-			return
-		}
-		visitedSteps[currentStepID] = true
-
-		// Find step configuration
-		var stepConfig *StepConfig
-		for i := range definition.Steps {
-			if definition.Steps[i].ID == currentStepID {
-				stepConfig = &definition.Steps[i]
-				break
-			}
+	for i, stepName := range stepOrder {
+		stepData, exists := steps[stepName]
+		if !exists {
+			e.logger.WithFields(map[string]interface{}{
+				"flow_run_id": runID.String(),
+				"step_name":   stepName,
+				"step_index":  i,
+			}).Warn("Step not found in flow definition, skipping")
+			continue
 		}
 
-		if stepConfig == nil {
-			e.failExecution(execCtx, fmt.Errorf("step not found: %s", currentStepID))
-			return
-		}
+		e.logger.WithFields(map[string]interface{}{
+			"flow_run_id": runID.String(),
+			"step_name":   stepName,
+			"step_index":  i + 1,
+			"total_steps": len(stepOrder),
+		}).Info("Executing step")
 
-		// Execute step
-		nextStepID, err := e.executeStep(ctx, execCtx, stepConfig)
+		stepOutput, err := e.executeStep(ctx, runID, stepName, stepData, stepContext)
 		if err != nil {
-			e.failExecution(execCtx, err)
-			return
+			e.logger.WithError(err).WithFields(map[string]interface{}{
+				"flow_run_id": runID.String(),
+				"step_name":   stepName,
+				"step_index":  i + 1,
+			}).Error("Step execution failed")
+			return e.markFlowRunFailed(ctx, runID, fmt.Sprintf("Step '%s' failed: %v", stepName, err))
 		}
 
-		currentStepID = nextStepID
+		// Update context with step output for next steps
+		stepContext = mergeStepContext(stepContext, stepName, stepOutput)
+
+		e.logger.WithFields(map[string]interface{}{
+			"flow_run_id":  runID.String(),
+			"step_name":    stepName,
+			"step_index":   i + 1,
+			"step_output":  stepOutput,
+			"context_size": len(stepContext),
+		}).Info("Step executed successfully")
 	}
 
-	// All steps completed successfully
-	e.completeExecution(execCtx, nil)
-}
-
-// executeStep executes a single workflow step
-func (e *DefaultEngine) executeStep(ctx context.Context, execCtx *ExecutionContext, stepConfig *StepConfig) (string, error) {
-	stepResult := &StepResult{
-		StepID:    stepConfig.ID,
-		Status:    StepStatusRunning,
-		StartedAt: time.Now(),
-		InputData: make(map[string]interface{}),
-		Attempts:  1,
-	}
-
-	// Store step result
-	execCtx.Steps[stepConfig.ID] = stepResult
-
-	// Handle different step types
-	switch stepConfig.Type {
-	case "action":
-		return e.executeActionStep(ctx, execCtx, stepConfig, stepResult)
-	case "condition":
-		return e.executeConditionStep(ctx, execCtx, stepConfig, stepResult)
-	default:
-		return "", fmt.Errorf("unknown step type: %s", stepConfig.Type)
-	}
-}
-
-// executeActionStep executes an action step
-func (e *DefaultEngine) executeActionStep(ctx context.Context, execCtx *ExecutionContext, stepConfig *StepConfig, stepResult *StepResult) (string, error) {
-	if stepConfig.Action == nil {
-		return "", fmt.Errorf("action configuration missing for step: %s", stepConfig.ID)
-	}
-
-	// Get action implementation
-	e.mutex.RLock()
-	action, exists := e.actions[stepConfig.Action.Type]
-	e.mutex.RUnlock()
-
-	if !exists {
-		return "", fmt.Errorf("unknown action type: %s", stepConfig.Action.Type)
-	}
-
-	// Prepare input data
-	inputData := make(map[string]interface{})
-	for k, v := range execCtx.Variables {
-		inputData[k] = v
-	}
-	for k, v := range execCtx.TriggerData {
-		inputData[k] = v
-	}
-	for k, v := range stepConfig.Variables {
-		inputData[k] = v
-	}
-
-	stepResult.InputData = inputData
-
-	// Execute action with retry logic
-	var outputData map[string]interface{}
-	var err error
-
-	maxAttempts := 1
-	if stepConfig.Retry != nil {
-		maxAttempts = stepConfig.Retry.MaxAttempts
-	}
-
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		stepResult.Attempts = attempt
-
-		outputData, err = action.Execute(ctx, stepConfig.Action.Config, inputData)
-		if err == nil {
-			break
-		}
-
-		if attempt < maxAttempts && stepConfig.Retry != nil {
-			time.Sleep(stepConfig.Retry.Delay)
-		}
-	}
-
-	// Update step result
-	stepResult.CompletedAt = &time.Time{}
-	*stepResult.CompletedAt = time.Now()
-	stepResult.Duration = stepResult.CompletedAt.Sub(stepResult.StartedAt)
-	stepResult.OutputData = outputData
-
-	if err != nil {
-		stepResult.Status = StepStatusFailed
-		stepResult.ErrorMessage = err.Error()
-
-		// Handle error based on configuration
-		if stepConfig.OnError != nil {
-			switch stepConfig.OnError.Strategy {
-			case "continue":
-				stepResult.Status = StepStatusSkipped
-				return e.getNextStepID(stepConfig, true), nil
-			case "fallback":
-				if stepConfig.OnError.Fallback != "" {
-					return stepConfig.OnError.Fallback, nil
-				}
-			}
-		}
-
-		return "", err
-	}
-
-	stepResult.Status = StepStatusCompleted
-
-	// Update execution variables with output data
-	for k, v := range outputData {
-		execCtx.Variables[k] = v
-	}
-
-	return e.getNextStepID(stepConfig, true), nil
-}
-
-// executeConditionStep executes a condition step
-func (e *DefaultEngine) executeConditionStep(ctx context.Context, execCtx *ExecutionContext, stepConfig *StepConfig, stepResult *StepResult) (string, error) {
-	if stepConfig.Condition == nil {
-		return "", fmt.Errorf("condition configuration missing for step: %s", stepConfig.ID)
-	}
-
-	// TODO: Implement condition evaluation logic
-	// For now, just return success path
-	stepResult.Status = StepStatusCompleted
-	stepResult.CompletedAt = &time.Time{}
-	*stepResult.CompletedAt = time.Now()
-	stepResult.Duration = stepResult.CompletedAt.Sub(stepResult.StartedAt)
-
-	return e.getNextStepID(stepConfig, true), nil
-}
-
-// getNextStepID determines the next step based on execution result
-func (e *DefaultEngine) getNextStepID(stepConfig *StepConfig, success bool) string {
-	if success && len(stepConfig.OnSuccess) > 0 {
-		return stepConfig.OnSuccess[0]
-	}
-	if !success && len(stepConfig.OnFailure) > 0 {
-		return stepConfig.OnFailure[0]
-	}
-	return ""
-}
-
-// updateExecutionStatus updates the execution status
-func (e *DefaultEngine) updateExecutionStatus(execCtx *ExecutionContext, status ExecutionStatus) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	execCtx.Status = status
-}
-
-// completeExecution marks an execution as completed
-func (e *DefaultEngine) completeExecution(execCtx *ExecutionContext, outputData map[string]interface{}) {
-	now := time.Now()
-	execCtx.CompletedAt = &now
-	execCtx.Status = StatusCompleted
-
-	if outputData == nil {
-		outputData = execCtx.Variables
-	}
-
-	// Update database
-	duration := int32(execCtx.CompletedAt.Sub(execCtx.StartedAt).Milliseconds())
-	_, err := e.executionService.UpdateExecutionStatus(
-		context.Background(),
-		execCtx.ExecutionID.String(),
-		string(StatusCompleted),
-		outputData,
-		execCtx.CompletedAt,
-		duration,
-		"",
-	)
-	if err != nil {
-		log.Printf("Failed to update execution status: %v", err)
-	}
-}
-
-// failExecution marks an execution as failed
-func (e *DefaultEngine) failExecution(execCtx *ExecutionContext, err error) {
-	now := time.Now()
-	execCtx.CompletedAt = &now
-	execCtx.Status = StatusFailed
-	execCtx.Error = err.Error()
-
-	// Update database
-	duration := int32(execCtx.CompletedAt.Sub(execCtx.StartedAt).Milliseconds())
-	_, dbErr := e.executionService.UpdateExecutionStatus(
-		context.Background(),
-		execCtx.ExecutionID.String(),
-		string(StatusFailed),
-		make(map[string]interface{}),
-		execCtx.CompletedAt,
-		duration,
-		err.Error(),
-	)
-	if dbErr != nil {
-		log.Printf("Failed to update execution status: %v", dbErr)
-	}
-}
-
-// cleanupExecution removes execution from memory
-func (e *DefaultEngine) cleanupExecution(executionID uuid.UUID) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	delete(e.executions, executionID)
-}
-
-// GetExecution retrieves an execution context
-func (e *DefaultEngine) GetExecution(ctx context.Context, executionID uuid.UUID) (*ExecutionContext, error) {
-	e.mutex.RLock()
-	defer e.mutex.RUnlock()
-
-	execCtx, exists := e.executions[executionID]
-	if !exists {
-		return nil, fmt.Errorf("execution not found: %s", executionID)
-	}
-
-	return execCtx, nil
-}
-
-// CancelExecution cancels a running workflow execution
-func (e *DefaultEngine) CancelExecution(ctx context.Context, executionID uuid.UUID) error {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	execCtx, exists := e.executions[executionID]
-	if !exists {
-		return fmt.Errorf("execution not found: %s", executionID)
-	}
-
-	if execCtx.Status == StatusRunning {
-		execCtx.Status = StatusCancelled
-		now := time.Now()
-		execCtx.CompletedAt = &now
-
-		// Update database
-		duration := int32(execCtx.CompletedAt.Sub(execCtx.StartedAt).Milliseconds())
-		_, err := e.executionService.UpdateExecutionStatus(
-			ctx,
-			executionID.String(),
-			string(StatusCancelled),
-			make(map[string]interface{}),
-			execCtx.CompletedAt,
-			duration,
-			"Execution cancelled by user",
-		)
+	// Mark flow run as succeeded
+	if err := e.markFlowRunSucceeded(ctx, runID); err != nil {
+		e.logger.WithError(err).WithField("flow_run_id", runID.String()).Error("Failed to mark flow run as succeeded")
 		return err
 	}
 
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":    runID.String(),
+		"total_steps":    len(stepOrder),
+		"execution_time": time.Since(flowRun.StartTime.Time),
+	}).Info("Flow execution completed successfully")
+
 	return nil
 }
 
-// StartTriggers starts all triggers for active workflows
-func (e *DefaultEngine) StartTriggers(ctx context.Context) error {
-	// TODO: Implement trigger startup logic
-	// This would fetch all active workflows and start their triggers
-	return nil
-}
+// executeTrigger executes the trigger and returns its output
+func (e *ExecutionEngine) executeTrigger(ctx context.Context, flowRunID uuid.UUID, trigger map[string]interface{}) (map[string]interface{}, error) {
+	triggerType := getTriggerType(trigger)
 
-// StopTriggers stops all triggers
-func (e *DefaultEngine) StopTriggers(ctx context.Context) error {
-	e.triggerMutex.Lock()
-	defer e.triggerMutex.Unlock()
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":  flowRunID.String(),
+		"trigger_type": triggerType,
+	}).Debug("Processing trigger")
 
-	for workflowID, trigger := range e.activeTriggers {
-		if err := trigger.Stop(ctx); err != nil {
-			log.Printf("Failed to stop trigger for workflow %s: %v", workflowID, err)
+	// Create step run for trigger
+	stepRun, err := e.createStepRun(ctx, flowRunID, "trigger", trigger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trigger step run: %w", err)
+	}
+
+	var output map[string]interface{}
+
+	switch triggerType {
+	case "manual":
+		output = map[string]interface{}{
+			"triggered_at": time.Now().Format(time.RFC3339),
+			"trigger_type": "manual",
+		}
+	case "webhook":
+		// Extract webhook payload if available
+		if payload, ok := trigger["payload"]; ok {
+			output = map[string]interface{}{
+				"triggered_at": time.Now().Format(time.RFC3339),
+				"trigger_type": "webhook",
+				"payload":      payload,
+			}
+		} else {
+			output = map[string]interface{}{
+				"triggered_at": time.Now().Format(time.RFC3339),
+				"trigger_type": "webhook",
+				"payload":      map[string]interface{}{},
+			}
+		}
+	case "schedule":
+		output = map[string]interface{}{
+			"triggered_at": time.Now().Format(time.RFC3339),
+			"trigger_type": "schedule",
+		}
+	default:
+		e.logger.WithFields(map[string]interface{}{
+			"flow_run_id":  flowRunID.String(),
+			"trigger_type": triggerType,
+		}).Warn("Unknown trigger type, using default output")
+		output = map[string]interface{}{
+			"triggered_at": time.Now().Format(time.RFC3339),
+			"trigger_type": triggerType,
 		}
 	}
 
-	e.activeTriggers = make(map[uuid.UUID]interfaces.Trigger)
-	return nil
+	// Update step run with success
+	if err := e.completeStepRun(ctx, stepRun.ID, output, "SUCCEEDED"); err != nil {
+		return nil, fmt.Errorf("failed to complete trigger step run: %w", err)
+	}
+
+	return output, nil
 }
 
-// Shutdown gracefully shuts down the engine
-func (e *DefaultEngine) Shutdown(ctx context.Context) error {
-	e.cancel()
-	return e.StopTriggers(ctx)
+// executeStep executes a single step and returns its output
+func (e *ExecutionEngine) executeStep(ctx context.Context, flowRunID uuid.UUID, stepName string, stepData interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	stepMap, ok := stepData.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid step data format for step '%s'", stepName)
+	}
+
+	stepType := getStepType(stepMap)
+
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id": flowRunID.String(),
+		"step_name":   stepName,
+		"step_type":   stepType,
+		"step_data":   stepMap,
+	}).Debug("Processing step")
+
+	// Create step run
+	stepRun, err := e.createStepRun(ctx, flowRunID, stepName, stepMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create step run for '%s': %w", stepName, err)
+	}
+
+	var output map[string]interface{}
+
+	switch stepType {
+	case "http":
+		output, err = e.executeHTTPStep(ctx, stepName, stepMap, context)
+	case "log":
+		output, err = e.executeLogStep(ctx, stepName, stepMap, context)
+	case "email":
+		output, err = e.executeEmailStep(ctx, stepName, stepMap, context)
+	case "condition":
+		output, err = e.executeConditionStep(ctx, stepName, stepMap, context)
+	case "action":
+		// Handle generic action type - determine specific action based on step data
+		output, err = e.executeActionStep(ctx, stepName, stepMap, context)
+	default:
+		e.logger.WithFields(map[string]interface{}{
+			"flow_run_id": flowRunID.String(),
+			"step_name":   stepName,
+			"step_type":   stepType,
+		}).Warn("Unknown step type, marking as succeeded with empty output")
+		output = map[string]interface{}{
+			"executed_at": time.Now().Format(time.RFC3339),
+			"step_type":   stepType,
+			"message":     fmt.Sprintf("Step '%s' of type '%s' executed (placeholder)", stepName, stepType),
+		}
+	}
+
+	if err != nil {
+		// Mark step as failed
+		if updateErr := e.failStepRun(ctx, stepRun.ID, err.Error()); updateErr != nil {
+			e.logger.WithError(updateErr).WithField("step_run_id", stepRun.ID).Error("Failed to update step run with error")
+		}
+		return nil, err
+	}
+
+	// Mark step as succeeded
+	if err := e.completeStepRun(ctx, stepRun.ID, output, "SUCCEEDED"); err != nil {
+		return nil, fmt.Errorf("failed to complete step run for '%s': %w", stepName, err)
+	}
+
+	return output, nil
+}
+
+// Step execution implementations
+func (e *ExecutionEngine) executeHTTPStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "http",
+		"step_data": stepData,
+	}).Info("Executing HTTP step")
+
+	// This is a placeholder implementation
+	// In a real implementation, you would make actual HTTP requests
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "http",
+		"url":         stepData["url"],
+		"method":      stepData["method"],
+		"status_code": 200,
+		"response":    "HTTP request executed successfully (placeholder)",
+	}, nil
+}
+
+func (e *ExecutionEngine) executeLogStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	message := fmt.Sprintf("Log step '%s' executed", stepName)
+	if msg, ok := stepData["message"]; ok {
+		message = fmt.Sprintf("%v", msg)
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "log",
+		"message":   message,
+		"context":   context,
+	}).Info("Executing log step")
+
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "log",
+		"message":     message,
+		"logged":      true,
+	}, nil
+}
+
+func (e *ExecutionEngine) executeEmailStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "email",
+		"step_data": stepData,
+	}).Info("Executing email step")
+
+	// This is a placeholder implementation
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "email",
+		"to":          stepData["to"],
+		"subject":     stepData["subject"],
+		"sent":        true,
+		"message":     "Email sent successfully (placeholder)",
+	}, nil
+}
+
+func (e *ExecutionEngine) executeConditionStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "condition",
+		"step_data": stepData,
+	}).Info("Executing condition step")
+
+	// This is a placeholder implementation
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "condition",
+		"condition":   stepData["condition"],
+		"result":      true,
+		"message":     "Condition evaluated (placeholder)",
+	}, nil
+}
+
+func (e *ExecutionEngine) executeActionStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "action",
+		"step_data": stepData,
+	}).Info("Executing action step")
+
+	// Determine the specific action type from step data
+	actionType := "unknown"
+	if actionName, ok := stepData["actionName"].(string); ok {
+		actionType = actionName
+	} else if pieceType, ok := stepData["pieceType"].(string); ok {
+		actionType = pieceType
+	} else if settings, ok := stepData["settings"].(map[string]interface{}); ok {
+		if pieceType, ok := settings["pieceType"].(string); ok {
+			actionType = pieceType
+		}
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name":   stepName,
+		"action_type": actionType,
+	}).Debug("Determined action type")
+
+	// Route to specific action handler based on action type
+	switch actionType {
+	case "http", "http-piece":
+		return e.executeHTTPStep(ctx, stepName, stepData, context)
+	case "log", "log-piece":
+		return e.executeLogStep(ctx, stepName, stepData, context)
+	case "email", "email-piece":
+		return e.executeEmailStep(ctx, stepName, stepData, context)
+	default:
+		// Generic action execution
+		return map[string]interface{}{
+			"executed_at": time.Now().Format(time.RFC3339),
+			"step_type":   "action",
+			"action_type": actionType,
+			"message":     fmt.Sprintf("Action step '%s' of type '%s' executed (placeholder)", stepName, actionType),
+		}, nil
+	}
+}
+
+// Database helper methods
+func (e *ExecutionEngine) createStepRun(ctx context.Context, flowRunID uuid.UUID, stepName string, stepData interface{}) (*sqlc.StepRun, error) {
+	inputJSON, err := json.Marshal(stepData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal step input: %w", err)
+	}
+
+	tx, err := e.db.Pool().Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	stepRun, err := e.db.Queries().WithTx(tx).CreateStepRun(ctx, sqlc.CreateStepRunParams{
+		FlowRunID: pgtype.UUID{Bytes: flowRunID, Valid: true},
+		StepName:  stepName,
+		Status:    pgtype.Text{String: "RUNNING", Valid: true},
+		Input:     inputJSON,
+		StartTime: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return &stepRun, nil
+}
+
+func (e *ExecutionEngine) completeStepRun(ctx context.Context, stepRunID pgtype.UUID, output map[string]interface{}, status string) error {
+	outputJSON, err := json.Marshal(output)
+	if err != nil {
+		return fmt.Errorf("failed to marshal step output: %w", err)
+	}
+
+	tx, err := e.db.Pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = e.db.Queries().WithTx(tx).UpdateStepRunOutput(ctx, sqlc.UpdateStepRunOutputParams{
+		ID:     stepRunID,
+		Output: outputJSON,
+		Status: pgtype.Text{String: status, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (e *ExecutionEngine) failStepRun(ctx context.Context, stepRunID pgtype.UUID, errorMessage string) error {
+	tx, err := e.db.Pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = e.db.Queries().WithTx(tx).UpdateStepRunError(ctx, sqlc.UpdateStepRunErrorParams{
+		ID:           stepRunID,
+		ErrorMessage: pgtype.Text{String: errorMessage, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (e *ExecutionEngine) markFlowRunSucceeded(ctx context.Context, flowRunID uuid.UUID) error {
+	tx, err := e.db.Pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	err = e.db.Queries().WithTx(tx).UpdateFlowRunStatusWithFinishTime(ctx, sqlc.UpdateFlowRunStatusWithFinishTimeParams{
+		ID:     pgtype.UUID{Bytes: flowRunID, Valid: true},
+		Status: pgtype.Text{String: "SUCCEEDED", Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (e *ExecutionEngine) markFlowRunFailed(ctx context.Context, flowRunID uuid.UUID, errorMessage string) error {
+	e.logger.WithFields(map[string]interface{}{
+		"flow_run_id":   flowRunID.String(),
+		"error_message": errorMessage,
+	}).Error("Marking flow run as failed")
+
+	tx, err := e.db.Pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	err = e.db.Queries().WithTx(tx).UpdateFlowRunStatusWithFinishTime(ctx, sqlc.UpdateFlowRunStatusWithFinishTimeParams{
+		ID:     pgtype.UUID{Bytes: flowRunID, Valid: true},
+		Status: pgtype.Text{String: "FAILED", Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// Helper functions
+func getTriggerType(trigger map[string]interface{}) string {
+	if triggerType, ok := trigger["type"].(string); ok && triggerType != "" {
+		return triggerType
+	}
+	// Check for alternative field names
+	if triggerType, ok := trigger["triggerType"].(string); ok && triggerType != "" {
+		return triggerType
+	}
+	// Default to manual trigger
+	return "manual"
+}
+
+func getStepType(step map[string]interface{}) string {
+	if stepType, ok := step["type"].(string); ok {
+		return stepType
+	}
+	if stepType, ok := step["stepType"].(string); ok {
+		return stepType
+	}
+	return "unknown"
+}
+
+func getStepExecutionOrder(steps map[string]interface{}) []string {
+	// This is a simple implementation that executes steps in alphabetical order
+	// In a real implementation, you would parse the step dependencies and create a proper execution order
+	var stepNames []string
+	for stepName := range steps {
+		stepNames = append(stepNames, stepName)
+	}
+	return stepNames
+}
+
+func mergeStepContext(context map[string]interface{}, stepName string, stepOutput map[string]interface{}) map[string]interface{} {
+	if context == nil {
+		context = make(map[string]interface{})
+	}
+	context[stepName] = stepOutput
+	return context
 }

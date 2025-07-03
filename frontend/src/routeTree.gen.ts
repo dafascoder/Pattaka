@@ -8,295 +8,481 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as authLoginRouteImport } from "./routes/(auth)/login";
-import { Route as authRegisterRouteImport } from "./routes/(auth)/register";
-import { Route as authenticatedBuilderRouteImport } from "./routes/(authenticated)/builder";
-import { Route as authenticatedDashboardLayoutRouteImport } from "./routes/(authenticated)/dashboard/_layout";
-import { Route as authenticatedDashboardLayoutBuilderRouteImport } from "./routes/(authenticated)/dashboard/_layout.builder";
-import { Route as authenticatedDashboardLayoutExecutionsRouteImport } from "./routes/(authenticated)/dashboard/_layout.executions";
-import { Route as authenticatedDashboardLayoutIndexRouteImport } from "./routes/(authenticated)/dashboard/_layout.index";
-import { Route as authenticatedDashboardLayoutIntegrationsRouteImport } from "./routes/(authenticated)/dashboard/_layout.integrations";
-import { Route as authenticatedDashboardLayoutWorkflowsRouteImport } from "./routes/(authenticated)/dashboard/_layout.workflows";
-import { Route as landingIndexRouteImport } from "./routes/(landing)/index";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as landingIndexRouteImport } from './routes/(landing)/index'
+import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthLayoutRouteImport } from './routes/auth/_layout'
+import { Route as authenticatedBuilderRouteImport } from './routes/(authenticated)/builder'
+import { Route as authenticatedDashboardLayoutRouteImport } from './routes/(authenticated)/dashboard/_layout'
+import { Route as authenticatedDashboardLayoutIndexRouteImport } from './routes/(authenticated)/dashboard/_layout.index'
+import { Route as authenticatedDashboardProjectProjectIdRouteImport } from './routes/(authenticated)/dashboard/project/$projectId'
+import { Route as authenticatedDashboardLayoutProjectsRouteImport } from './routes/(authenticated)/dashboard/_layout.projects'
+import { Route as authenticatedDashboardLayoutProjectProjectIdRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId'
+import { Route as authenticatedDashboardLayoutProjectProjectIdIndexRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.index'
+import { Route as authenticatedDashboardLayoutProjectProjectIdSettingsRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.settings'
+import { Route as authenticatedDashboardLayoutProjectProjectIdFlowsRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.flows'
+import { Route as authenticatedDashboardLayoutProjectProjectIdExecutionsRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.executions'
+import { Route as authenticatedDashboardLayoutProjectProjectIdConnectionsRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.connections'
+import { Route as authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.executions.$runId'
 
+const AuthRouteImport = createFileRoute('/auth')()
 const authenticatedDashboardRouteImport = createFileRoute(
-	"/(authenticated)/dashboard"
-)();
+  '/(authenticated)/dashboard',
+)()
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authenticatedDashboardRoute = authenticatedDashboardRouteImport.update({
-	id: "/(authenticated)/dashboard",
-	path: "/dashboard",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/(authenticated)/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const landingIndexRoute = landingIndexRouteImport.update({
-	id: "/(landing)/",
-	path: "/",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/(landing)/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRegisterRoute = AuthRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLayoutRoute = AuthLayoutRouteImport.update({
+  id: '/_layout',
+  getParentRoute: () => AuthRoute,
+} as any)
 const authenticatedBuilderRoute = authenticatedBuilderRouteImport.update({
-	id: "/(authenticated)/builder",
-	path: "/builder",
-	getParentRoute: () => rootRouteImport,
-} as any);
-const authRegisterRoute = authRegisterRouteImport.update({
-	id: "/(auth)/register",
-	path: "/register",
-	getParentRoute: () => rootRouteImport,
-} as any);
-const authLoginRoute = authLoginRouteImport.update({
-	id: "/(auth)/login",
-	path: "/login",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/(authenticated)/builder',
+  path: '/builder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authenticatedDashboardLayoutRoute =
-	authenticatedDashboardLayoutRouteImport.update({
-		id: "/_layout",
-		getParentRoute: () => authenticatedDashboardRoute,
-	} as any);
+  authenticatedDashboardLayoutRouteImport.update({
+    id: '/_layout',
+    getParentRoute: () => authenticatedDashboardRoute,
+  } as any)
 const authenticatedDashboardLayoutIndexRoute =
-	authenticatedDashboardLayoutIndexRouteImport.update({
-		id: "/",
-		path: "/",
-		getParentRoute: () => authenticatedDashboardLayoutRoute,
-	} as any);
-const authenticatedDashboardLayoutWorkflowsRoute =
-	authenticatedDashboardLayoutWorkflowsRouteImport.update({
-		id: "/workflows",
-		path: "/workflows",
-		getParentRoute: () => authenticatedDashboardLayoutRoute,
-	} as any);
-const authenticatedDashboardLayoutIntegrationsRoute =
-	authenticatedDashboardLayoutIntegrationsRouteImport.update({
-		id: "/integrations",
-		path: "/integrations",
-		getParentRoute: () => authenticatedDashboardLayoutRoute,
-	} as any);
-const authenticatedDashboardLayoutExecutionsRoute =
-	authenticatedDashboardLayoutExecutionsRouteImport.update({
-		id: "/executions",
-		path: "/executions",
-		getParentRoute: () => authenticatedDashboardLayoutRoute,
-	} as any);
-const authenticatedDashboardLayoutBuilderRoute =
-	authenticatedDashboardLayoutBuilderRouteImport.update({
-		id: "/builder",
-		path: "/builder",
-		getParentRoute: () => authenticatedDashboardLayoutRoute,
-	} as any);
+  authenticatedDashboardLayoutIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => authenticatedDashboardLayoutRoute,
+  } as any)
+const authenticatedDashboardProjectProjectIdRoute =
+  authenticatedDashboardProjectProjectIdRouteImport.update({
+    id: '/project/$projectId',
+    path: '/project/$projectId',
+    getParentRoute: () => authenticatedDashboardRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectsRoute =
+  authenticatedDashboardLayoutProjectsRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => authenticatedDashboardLayoutRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdRoute =
+  authenticatedDashboardLayoutProjectProjectIdRouteImport.update({
+    id: '/project/$projectId',
+    path: '/project/$projectId',
+    getParentRoute: () => authenticatedDashboardLayoutRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdIndexRoute =
+  authenticatedDashboardLayoutProjectProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => authenticatedDashboardLayoutProjectProjectIdRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdSettingsRoute =
+  authenticatedDashboardLayoutProjectProjectIdSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => authenticatedDashboardLayoutProjectProjectIdRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdFlowsRoute =
+  authenticatedDashboardLayoutProjectProjectIdFlowsRouteImport.update({
+    id: '/flows',
+    path: '/flows',
+    getParentRoute: () => authenticatedDashboardLayoutProjectProjectIdRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdExecutionsRoute =
+  authenticatedDashboardLayoutProjectProjectIdExecutionsRouteImport.update({
+    id: '/executions',
+    path: '/executions',
+    getParentRoute: () => authenticatedDashboardLayoutProjectProjectIdRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdConnectionsRoute =
+  authenticatedDashboardLayoutProjectProjectIdConnectionsRouteImport.update({
+    id: '/connections',
+    path: '/connections',
+    getParentRoute: () => authenticatedDashboardLayoutProjectProjectIdRoute,
+  } as any)
+const authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute =
+  authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRouteImport.update(
+    {
+      id: '/$runId',
+      path: '/$runId',
+      getParentRoute: () =>
+        authenticatedDashboardLayoutProjectProjectIdExecutionsRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
-	"/login": typeof authLoginRoute;
-	"/register": typeof authRegisterRoute;
-	"/builder": typeof authenticatedBuilderRoute;
-	"/": typeof landingIndexRoute;
-	"/dashboard": typeof authenticatedDashboardLayoutRouteWithChildren;
-	"/dashboard/builder": typeof authenticatedDashboardLayoutBuilderRoute;
-	"/dashboard/executions": typeof authenticatedDashboardLayoutExecutionsRoute;
-	"/dashboard/integrations": typeof authenticatedDashboardLayoutIntegrationsRoute;
-	"/dashboard/workflows": typeof authenticatedDashboardLayoutWorkflowsRoute;
-	"/dashboard/": typeof authenticatedDashboardLayoutIndexRoute;
+  '/builder': typeof authenticatedBuilderRoute
+  '/auth': typeof AuthLayoutRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/': typeof landingIndexRoute
+  '/dashboard': typeof authenticatedDashboardLayoutRouteWithChildren
+  '/dashboard/projects': typeof authenticatedDashboardLayoutProjectsRoute
+  '/dashboard/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdRouteWithChildren
+  '/dashboard/': typeof authenticatedDashboardLayoutIndexRoute
+  '/dashboard/project/$projectId/connections': typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
+  '/dashboard/project/$projectId/executions': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren
+  '/dashboard/project/$projectId/flows': typeof authenticatedDashboardLayoutProjectProjectIdFlowsRoute
+  '/dashboard/project/$projectId/settings': typeof authenticatedDashboardLayoutProjectProjectIdSettingsRoute
+  '/dashboard/project/$projectId/': typeof authenticatedDashboardLayoutProjectProjectIdIndexRoute
+  '/dashboard/project/$projectId/executions/$runId': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute
 }
 export interface FileRoutesByTo {
-	"/login": typeof authLoginRoute;
-	"/register": typeof authRegisterRoute;
-	"/builder": typeof authenticatedBuilderRoute;
-	"/": typeof landingIndexRoute;
-	"/dashboard": typeof authenticatedDashboardLayoutIndexRoute;
-	"/dashboard/builder": typeof authenticatedDashboardLayoutBuilderRoute;
-	"/dashboard/executions": typeof authenticatedDashboardLayoutExecutionsRoute;
-	"/dashboard/integrations": typeof authenticatedDashboardLayoutIntegrationsRoute;
-	"/dashboard/workflows": typeof authenticatedDashboardLayoutWorkflowsRoute;
+  '/builder': typeof authenticatedBuilderRoute
+  '/auth': typeof AuthLayoutRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/': typeof landingIndexRoute
+  '/dashboard': typeof authenticatedDashboardLayoutIndexRoute
+  '/dashboard/projects': typeof authenticatedDashboardLayoutProjectsRoute
+  '/dashboard/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdIndexRoute
+  '/dashboard/project/$projectId/connections': typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
+  '/dashboard/project/$projectId/executions': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren
+  '/dashboard/project/$projectId/flows': typeof authenticatedDashboardLayoutProjectProjectIdFlowsRoute
+  '/dashboard/project/$projectId/settings': typeof authenticatedDashboardLayoutProjectProjectIdSettingsRoute
+  '/dashboard/project/$projectId/executions/$runId': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute
 }
 export interface FileRoutesById {
-	__root__: typeof rootRouteImport;
-	"/(auth)/login": typeof authLoginRoute;
-	"/(auth)/register": typeof authRegisterRoute;
-	"/(authenticated)/builder": typeof authenticatedBuilderRoute;
-	"/(landing)/": typeof landingIndexRoute;
-	"/(authenticated)/dashboard": typeof authenticatedDashboardRouteWithChildren;
-	"/(authenticated)/dashboard/_layout": typeof authenticatedDashboardLayoutRouteWithChildren;
-	"/(authenticated)/dashboard/_layout/builder": typeof authenticatedDashboardLayoutBuilderRoute;
-	"/(authenticated)/dashboard/_layout/executions": typeof authenticatedDashboardLayoutExecutionsRoute;
-	"/(authenticated)/dashboard/_layout/integrations": typeof authenticatedDashboardLayoutIntegrationsRoute;
-	"/(authenticated)/dashboard/_layout/workflows": typeof authenticatedDashboardLayoutWorkflowsRoute;
-	"/(authenticated)/dashboard/_layout/": typeof authenticatedDashboardLayoutIndexRoute;
+  __root__: typeof rootRouteImport
+  '/(authenticated)/builder': typeof authenticatedBuilderRoute
+  '/auth': typeof AuthRouteWithChildren
+  '/auth/_layout': typeof AuthLayoutRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/(landing)/': typeof landingIndexRoute
+  '/(authenticated)/dashboard': typeof authenticatedDashboardRouteWithChildren
+  '/(authenticated)/dashboard/_layout': typeof authenticatedDashboardLayoutRouteWithChildren
+  '/(authenticated)/dashboard/_layout/projects': typeof authenticatedDashboardLayoutProjectsRoute
+  '/(authenticated)/dashboard/project/$projectId': typeof authenticatedDashboardProjectProjectIdRoute
+  '/(authenticated)/dashboard/_layout/': typeof authenticatedDashboardLayoutIndexRoute
+  '/(authenticated)/dashboard/_layout/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdRouteWithChildren
+  '/(authenticated)/dashboard/_layout/project/$projectId/connections': typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
+  '/(authenticated)/dashboard/_layout/project/$projectId/executions': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren
+  '/(authenticated)/dashboard/_layout/project/$projectId/flows': typeof authenticatedDashboardLayoutProjectProjectIdFlowsRoute
+  '/(authenticated)/dashboard/_layout/project/$projectId/settings': typeof authenticatedDashboardLayoutProjectProjectIdSettingsRoute
+  '/(authenticated)/dashboard/_layout/project/$projectId/': typeof authenticatedDashboardLayoutProjectProjectIdIndexRoute
+  '/(authenticated)/dashboard/_layout/project/$projectId/executions/$runId': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute
 }
 export interface FileRouteTypes {
-	fileRoutesByFullPath: FileRoutesByFullPath;
-	fullPaths:
-		| "/login"
-		| "/register"
-		| "/builder"
-		| "/"
-		| "/dashboard"
-		| "/dashboard/builder"
-		| "/dashboard/executions"
-		| "/dashboard/integrations"
-		| "/dashboard/workflows"
-		| "/dashboard/";
-	fileRoutesByTo: FileRoutesByTo;
-	to:
-		| "/login"
-		| "/register"
-		| "/builder"
-		| "/"
-		| "/dashboard"
-		| "/dashboard/builder"
-		| "/dashboard/executions"
-		| "/dashboard/integrations"
-		| "/dashboard/workflows";
-	id:
-		| "__root__"
-		| "/(auth)/login"
-		| "/(auth)/register"
-		| "/(authenticated)/builder"
-		| "/(landing)/"
-		| "/(authenticated)/dashboard"
-		| "/(authenticated)/dashboard/_layout"
-		| "/(authenticated)/dashboard/_layout/builder"
-		| "/(authenticated)/dashboard/_layout/executions"
-		| "/(authenticated)/dashboard/_layout/integrations"
-		| "/(authenticated)/dashboard/_layout/workflows"
-		| "/(authenticated)/dashboard/_layout/";
-	fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/builder'
+    | '/auth'
+    | '/auth/login'
+    | '/auth/register'
+    | '/'
+    | '/dashboard'
+    | '/dashboard/projects'
+    | '/dashboard/project/$projectId'
+    | '/dashboard/'
+    | '/dashboard/project/$projectId/connections'
+    | '/dashboard/project/$projectId/executions'
+    | '/dashboard/project/$projectId/flows'
+    | '/dashboard/project/$projectId/settings'
+    | '/dashboard/project/$projectId/'
+    | '/dashboard/project/$projectId/executions/$runId'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/builder'
+    | '/auth'
+    | '/auth/login'
+    | '/auth/register'
+    | '/'
+    | '/dashboard'
+    | '/dashboard/projects'
+    | '/dashboard/project/$projectId'
+    | '/dashboard/project/$projectId/connections'
+    | '/dashboard/project/$projectId/executions'
+    | '/dashboard/project/$projectId/flows'
+    | '/dashboard/project/$projectId/settings'
+    | '/dashboard/project/$projectId/executions/$runId'
+  id:
+    | '__root__'
+    | '/(authenticated)/builder'
+    | '/auth'
+    | '/auth/_layout'
+    | '/auth/login'
+    | '/auth/register'
+    | '/(landing)/'
+    | '/(authenticated)/dashboard'
+    | '/(authenticated)/dashboard/_layout'
+    | '/(authenticated)/dashboard/_layout/projects'
+    | '/(authenticated)/dashboard/project/$projectId'
+    | '/(authenticated)/dashboard/_layout/'
+    | '/(authenticated)/dashboard/_layout/project/$projectId'
+    | '/(authenticated)/dashboard/_layout/project/$projectId/connections'
+    | '/(authenticated)/dashboard/_layout/project/$projectId/executions'
+    | '/(authenticated)/dashboard/_layout/project/$projectId/flows'
+    | '/(authenticated)/dashboard/_layout/project/$projectId/settings'
+    | '/(authenticated)/dashboard/_layout/project/$projectId/'
+    | '/(authenticated)/dashboard/_layout/project/$projectId/executions/$runId'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-	authLoginRoute: typeof authLoginRoute;
-	authRegisterRoute: typeof authRegisterRoute;
-	authenticatedBuilderRoute: typeof authenticatedBuilderRoute;
-	landingIndexRoute: typeof landingIndexRoute;
-	authenticatedDashboardRoute: typeof authenticatedDashboardRouteWithChildren;
+  authenticatedBuilderRoute: typeof authenticatedBuilderRoute
+  AuthRoute: typeof AuthRouteWithChildren
+  landingIndexRoute: typeof landingIndexRoute
+  authenticatedDashboardRoute: typeof authenticatedDashboardRouteWithChildren
 }
 
-declare module "@tanstack/react-router" {
-	interface FileRoutesByPath {
-		"/(authenticated)/dashboard": {
-			id: "/(authenticated)/dashboard";
-			path: "/dashboard";
-			fullPath: "/dashboard";
-			preLoaderRoute: typeof authenticatedDashboardRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/(landing)/": {
-			id: "/(landing)/";
-			path: "/";
-			fullPath: "/";
-			preLoaderRoute: typeof landingIndexRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/(authenticated)/builder": {
-			id: "/(authenticated)/builder";
-			path: "/builder";
-			fullPath: "/builder";
-			preLoaderRoute: typeof authenticatedBuilderRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/(auth)/register": {
-			id: "/(auth)/register";
-			path: "/register";
-			fullPath: "/register";
-			preLoaderRoute: typeof authRegisterRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/(auth)/login": {
-			id: "/(auth)/login";
-			path: "/login";
-			fullPath: "/login";
-			preLoaderRoute: typeof authLoginRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/(authenticated)/dashboard/_layout": {
-			id: "/(authenticated)/dashboard/_layout";
-			path: "/dashboard";
-			fullPath: "/dashboard";
-			preLoaderRoute: typeof authenticatedDashboardLayoutRouteImport;
-			parentRoute: typeof authenticatedDashboardRoute;
-		};
-		"/(authenticated)/dashboard/_layout/": {
-			id: "/(authenticated)/dashboard/_layout/";
-			path: "/";
-			fullPath: "/dashboard/";
-			preLoaderRoute: typeof authenticatedDashboardLayoutIndexRouteImport;
-			parentRoute: typeof authenticatedDashboardLayoutRoute;
-		};
-		"/(authenticated)/dashboard/_layout/workflows": {
-			id: "/(authenticated)/dashboard/_layout/workflows";
-			path: "/workflows";
-			fullPath: "/dashboard/workflows";
-			preLoaderRoute: typeof authenticatedDashboardLayoutWorkflowsRouteImport;
-			parentRoute: typeof authenticatedDashboardLayoutRoute;
-		};
-		"/(authenticated)/dashboard/_layout/integrations": {
-			id: "/(authenticated)/dashboard/_layout/integrations";
-			path: "/integrations";
-			fullPath: "/dashboard/integrations";
-			preLoaderRoute: typeof authenticatedDashboardLayoutIntegrationsRouteImport;
-			parentRoute: typeof authenticatedDashboardLayoutRoute;
-		};
-		"/(authenticated)/dashboard/_layout/executions": {
-			id: "/(authenticated)/dashboard/_layout/executions";
-			path: "/executions";
-			fullPath: "/dashboard/executions";
-			preLoaderRoute: typeof authenticatedDashboardLayoutExecutionsRouteImport;
-			parentRoute: typeof authenticatedDashboardLayoutRoute;
-		};
-		"/(authenticated)/dashboard/_layout/builder": {
-			id: "/(authenticated)/dashboard/_layout/builder";
-			path: "/builder";
-			fullPath: "/dashboard/builder";
-			preLoaderRoute: typeof authenticatedDashboardLayoutBuilderRouteImport;
-			parentRoute: typeof authenticatedDashboardLayoutRoute;
-		};
-	}
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/dashboard': {
+      id: '/(authenticated)/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof authenticatedDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(landing)/': {
+      id: '/(landing)/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof landingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register': {
+      id: '/auth/register'
+      path: '/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/_layout': {
+      id: '/auth/_layout'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthLayoutRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/(authenticated)/builder': {
+      id: '/(authenticated)/builder'
+      path: '/builder'
+      fullPath: '/builder'
+      preLoaderRoute: typeof authenticatedBuilderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/dashboard/_layout': {
+      id: '/(authenticated)/dashboard/_layout'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof authenticatedDashboardLayoutRouteImport
+      parentRoute: typeof authenticatedDashboardRoute
+    }
+    '/(authenticated)/dashboard/_layout/': {
+      id: '/(authenticated)/dashboard/_layout/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof authenticatedDashboardLayoutIndexRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutRoute
+    }
+    '/(authenticated)/dashboard/project/$projectId': {
+      id: '/(authenticated)/dashboard/project/$projectId'
+      path: '/project/$projectId'
+      fullPath: '/dashboard/project/$projectId'
+      preLoaderRoute: typeof authenticatedDashboardProjectProjectIdRouteImport
+      parentRoute: typeof authenticatedDashboardRoute
+    }
+    '/(authenticated)/dashboard/_layout/projects': {
+      id: '/(authenticated)/dashboard/_layout/projects'
+      path: '/projects'
+      fullPath: '/dashboard/projects'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectsRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId'
+      path: '/project/$projectId'
+      fullPath: '/dashboard/project/$projectId'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId/': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId/'
+      path: '/'
+      fullPath: '/dashboard/project/$projectId/'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdIndexRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutProjectProjectIdRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId/settings': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId/settings'
+      path: '/settings'
+      fullPath: '/dashboard/project/$projectId/settings'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdSettingsRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutProjectProjectIdRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId/flows': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId/flows'
+      path: '/flows'
+      fullPath: '/dashboard/project/$projectId/flows'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdFlowsRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutProjectProjectIdRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId/executions': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId/executions'
+      path: '/executions'
+      fullPath: '/dashboard/project/$projectId/executions'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutProjectProjectIdRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId/connections': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId/connections'
+      path: '/connections'
+      fullPath: '/dashboard/project/$projectId/connections'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutProjectProjectIdRoute
+    }
+    '/(authenticated)/dashboard/_layout/project/$projectId/executions/$runId': {
+      id: '/(authenticated)/dashboard/_layout/project/$projectId/executions/$runId'
+      path: '/$runId'
+      fullPath: '/dashboard/project/$projectId/executions/$runId'
+      preLoaderRoute: typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRouteImport
+      parentRoute: typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRoute
+    }
+  }
 }
+
+interface AuthRouteChildren {
+  AuthLayoutRoute: typeof AuthLayoutRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthLayoutRoute: AuthLayoutRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthRegisterRoute: AuthRegisterRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
+interface authenticatedDashboardLayoutProjectProjectIdExecutionsRouteChildren {
+  authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute: typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute
+}
+
+const authenticatedDashboardLayoutProjectProjectIdExecutionsRouteChildren: authenticatedDashboardLayoutProjectProjectIdExecutionsRouteChildren =
+  {
+    authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute:
+      authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute,
+  }
+
+const authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren =
+  authenticatedDashboardLayoutProjectProjectIdExecutionsRoute._addFileChildren(
+    authenticatedDashboardLayoutProjectProjectIdExecutionsRouteChildren,
+  )
+
+interface authenticatedDashboardLayoutProjectProjectIdRouteChildren {
+  authenticatedDashboardLayoutProjectProjectIdConnectionsRoute: typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
+  authenticatedDashboardLayoutProjectProjectIdExecutionsRoute: typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren
+  authenticatedDashboardLayoutProjectProjectIdFlowsRoute: typeof authenticatedDashboardLayoutProjectProjectIdFlowsRoute
+  authenticatedDashboardLayoutProjectProjectIdSettingsRoute: typeof authenticatedDashboardLayoutProjectProjectIdSettingsRoute
+  authenticatedDashboardLayoutProjectProjectIdIndexRoute: typeof authenticatedDashboardLayoutProjectProjectIdIndexRoute
+}
+
+const authenticatedDashboardLayoutProjectProjectIdRouteChildren: authenticatedDashboardLayoutProjectProjectIdRouteChildren =
+  {
+    authenticatedDashboardLayoutProjectProjectIdConnectionsRoute:
+      authenticatedDashboardLayoutProjectProjectIdConnectionsRoute,
+    authenticatedDashboardLayoutProjectProjectIdExecutionsRoute:
+      authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren,
+    authenticatedDashboardLayoutProjectProjectIdFlowsRoute:
+      authenticatedDashboardLayoutProjectProjectIdFlowsRoute,
+    authenticatedDashboardLayoutProjectProjectIdSettingsRoute:
+      authenticatedDashboardLayoutProjectProjectIdSettingsRoute,
+    authenticatedDashboardLayoutProjectProjectIdIndexRoute:
+      authenticatedDashboardLayoutProjectProjectIdIndexRoute,
+  }
+
+const authenticatedDashboardLayoutProjectProjectIdRouteWithChildren =
+  authenticatedDashboardLayoutProjectProjectIdRoute._addFileChildren(
+    authenticatedDashboardLayoutProjectProjectIdRouteChildren,
+  )
 
 interface authenticatedDashboardLayoutRouteChildren {
-	authenticatedDashboardLayoutBuilderRoute: typeof authenticatedDashboardLayoutBuilderRoute;
-	authenticatedDashboardLayoutExecutionsRoute: typeof authenticatedDashboardLayoutExecutionsRoute;
-	authenticatedDashboardLayoutIntegrationsRoute: typeof authenticatedDashboardLayoutIntegrationsRoute;
-	authenticatedDashboardLayoutWorkflowsRoute: typeof authenticatedDashboardLayoutWorkflowsRoute;
-	authenticatedDashboardLayoutIndexRoute: typeof authenticatedDashboardLayoutIndexRoute;
+  authenticatedDashboardLayoutProjectsRoute: typeof authenticatedDashboardLayoutProjectsRoute
+  authenticatedDashboardLayoutIndexRoute: typeof authenticatedDashboardLayoutIndexRoute
+  authenticatedDashboardLayoutProjectProjectIdRoute: typeof authenticatedDashboardLayoutProjectProjectIdRouteWithChildren
 }
 
 const authenticatedDashboardLayoutRouteChildren: authenticatedDashboardLayoutRouteChildren =
-	{
-		authenticatedDashboardLayoutBuilderRoute,
-		authenticatedDashboardLayoutExecutionsRoute,
-		authenticatedDashboardLayoutIntegrationsRoute,
-		authenticatedDashboardLayoutWorkflowsRoute,
-		authenticatedDashboardLayoutIndexRoute,
-	};
+  {
+    authenticatedDashboardLayoutProjectsRoute:
+      authenticatedDashboardLayoutProjectsRoute,
+    authenticatedDashboardLayoutIndexRoute:
+      authenticatedDashboardLayoutIndexRoute,
+    authenticatedDashboardLayoutProjectProjectIdRoute:
+      authenticatedDashboardLayoutProjectProjectIdRouteWithChildren,
+  }
 
 const authenticatedDashboardLayoutRouteWithChildren =
-	authenticatedDashboardLayoutRoute._addFileChildren(
-		authenticatedDashboardLayoutRouteChildren
-	);
+  authenticatedDashboardLayoutRoute._addFileChildren(
+    authenticatedDashboardLayoutRouteChildren,
+  )
 
 interface authenticatedDashboardRouteChildren {
-	authenticatedDashboardLayoutRoute: typeof authenticatedDashboardLayoutRouteWithChildren;
+  authenticatedDashboardLayoutRoute: typeof authenticatedDashboardLayoutRouteWithChildren
+  authenticatedDashboardProjectProjectIdRoute: typeof authenticatedDashboardProjectProjectIdRoute
 }
 
 const authenticatedDashboardRouteChildren: authenticatedDashboardRouteChildren =
-	{
-		authenticatedDashboardLayoutRoute:
-			authenticatedDashboardLayoutRouteWithChildren,
-	};
+  {
+    authenticatedDashboardLayoutRoute:
+      authenticatedDashboardLayoutRouteWithChildren,
+    authenticatedDashboardProjectProjectIdRoute:
+      authenticatedDashboardProjectProjectIdRoute,
+  }
 
 const authenticatedDashboardRouteWithChildren =
-	authenticatedDashboardRoute._addFileChildren(
-		authenticatedDashboardRouteChildren
-	);
+  authenticatedDashboardRoute._addFileChildren(
+    authenticatedDashboardRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
-	authLoginRoute,
-	authRegisterRoute,
-	authenticatedBuilderRoute,
-	landingIndexRoute,
-	authenticatedDashboardRoute: authenticatedDashboardRouteWithChildren,
-};
+  authenticatedBuilderRoute: authenticatedBuilderRoute,
+  AuthRoute: AuthRouteWithChildren,
+  landingIndexRoute: landingIndexRoute,
+  authenticatedDashboardRoute: authenticatedDashboardRouteWithChildren,
+}
 export const routeTree = rootRouteImport
-	._addFileChildren(rootRouteChildren)
-	._addFileTypes<FileRouteTypes>();
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()

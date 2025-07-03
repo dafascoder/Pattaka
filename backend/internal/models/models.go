@@ -15,6 +15,98 @@ type APIResponse struct {
 	Message string      `json:"message,omitempty"`
 }
 
+// Project represents a project with JSON-serializable fields
+type Project struct {
+	ID              uuid.UUID              `json:"id"`
+	DisplayName     string                 `json:"display_name"`
+	OwnerID         string                 `json:"owner_id"`
+	PlatformID      uuid.UUID              `json:"platform_id"`
+	NotifyStatus    string                 `json:"notify_status"`
+	ExternalID      *string                `json:"external_id,omitempty"`
+	ReleasesEnabled bool                   `json:"releases_enabled"`
+	Metadata        map[string]interface{} `json:"metadata"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
+}
+
+// ProjectUsage represents project usage statistics
+type ProjectUsage struct {
+	ID              uuid.UUID `json:"id"`
+	DisplayName     string    `json:"display_name"`
+	FlowCount       int64     `json:"flow_count"`
+	FlowRunCount    int64     `json:"flow_run_count"`
+	ConnectionCount int64     `json:"connection_count"`
+}
+
+// Flow represents a flow definition
+type Flow struct {
+	ID        uuid.UUID              `json:"id"`
+	ProjectID uuid.UUID              `json:"project_id"`
+	FolderID  *uuid.UUID             `json:"folder_id,omitempty"`
+	Status    string                 `json:"status"`
+	Schedule  map[string]interface{} `json:"schedule,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
+}
+
+// FlowVersion represents a versioned flow definition
+type FlowVersion struct {
+	ID          uuid.UUID              `json:"id"`
+	FlowID      uuid.UUID              `json:"flow_id"`
+	Version     int32                  `json:"version"`
+	DisplayName string                 `json:"display_name"`
+	Trigger     map[string]interface{} `json:"trigger"`
+	Steps       map[string]interface{} `json:"steps"`
+	Status      string                 `json:"status"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+}
+
+// FlowRun represents an execution instance
+type FlowRun struct {
+	ID              uuid.UUID              `json:"id"`
+	FlowVersionID   uuid.UUID              `json:"flow_version_id"`
+	ProjectID       uuid.UUID              `json:"project_id"`
+	Status          string                 `json:"status"`
+	StartTime       time.Time              `json:"start_time"`
+	FinishTime      *time.Time             `json:"finish_time,omitempty"`
+	Environment     string                 `json:"environment"`
+	FlowDisplayName *string                `json:"flow_display_name,omitempty"`
+	LogsFileID      *uuid.UUID             `json:"logs_file_id,omitempty"`
+	Tags            []string               `json:"tags"`
+	PauseMetadata   map[string]interface{} `json:"pause_metadata"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
+}
+
+// StepRun represents individual step execution details
+type StepRun struct {
+	ID           uuid.UUID              `json:"id"`
+	FlowRunID    uuid.UUID              `json:"flow_run_id"`
+	StepName     string                 `json:"step_name"`
+	Status       string                 `json:"status"`
+	Input        map[string]interface{} `json:"input"`
+	Output       map[string]interface{} `json:"output"`
+	ErrorMessage *string                `json:"error_message,omitempty"`
+	Duration     *int32                 `json:"duration,omitempty"`
+	StartTime    time.Time              `json:"start_time"`
+	FinishTime   *time.Time             `json:"finish_time,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+}
+
+// AppConnection represents external service integrations
+type AppConnection struct {
+	ID          uuid.UUID              `json:"id"`
+	ProjectID   uuid.UUID              `json:"project_id"`
+	Name        string                 `json:"name"`
+	AppName     string                 `json:"app_name"`
+	Config      map[string]interface{} `json:"config"`
+	Credentials map[string]interface{} `json:"credentials,omitempty"`
+	Status      string                 `json:"status"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+}
+
 // Agent represents an agent with JSON-serializable fields
 type Agent struct {
 	ID          uuid.UUID              `json:"id"`
@@ -25,28 +117,6 @@ type Agent struct {
 	UserID      string                 `json:"user_id"`
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
-}
-
-// Workflow represents a workflow with JSON-serializable fields
-type Workflow struct {
-	ID          uuid.UUID              `json:"id"`
-	UserID      string                 `json:"user_id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Definition  map[string]interface{} `json:"definition"`
-	Version     int32                  `json:"version"`
-	IsActive    bool                   `json:"is_active"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-}
-
-// AgentWorkflow represents the association between agents and workflows
-type AgentWorkflow struct {
-	ID         uuid.UUID `json:"id"`
-	AgentID    uuid.UUID `json:"agent_id"`
-	WorkflowID uuid.UUID `json:"workflow_id"`
-	IsPrimary  bool      `json:"is_primary"`
-	CreatedAt  time.Time `json:"created_at"`
 }
 
 // Integration represents an integration with JSON-serializable fields
@@ -60,21 +130,6 @@ type Integration struct {
 	IsActive    bool                   `json:"is_active"`
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
-}
-
-// Execution represents an execution with JSON-serializable fields
-type Execution struct {
-	ID              uuid.UUID              `json:"id"`
-	WorkflowID      uuid.UUID              `json:"workflow_id"`
-	AgentID         *uuid.UUID             `json:"agent_id,omitempty"` // Optional: which agent executed this
-	Status          string                 `json:"status"`
-	InputData       map[string]interface{} `json:"input_data"`
-	OutputData      map[string]interface{} `json:"output_data"`
-	ErrorMessage    string                 `json:"error_message,omitempty"`
-	ExecutionTimeMs int32                  `json:"execution_time_ms"`
-	StartedAt       time.Time              `json:"started_at"`
-	CompletedAt     *time.Time             `json:"completed_at,omitempty"`
-	CreatedAt       time.Time              `json:"created_at"`
 }
 
 type Session struct {

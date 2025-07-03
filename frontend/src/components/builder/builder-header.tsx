@@ -14,7 +14,6 @@ import {
 } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { DebugView } from "@/components/debug/debug-view";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -37,7 +36,6 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "../ui/breadcrumb";
-import { useSidebar } from "../ui/sidebar";
 
 interface BuilderHeaderProps {
 	workflowId?: string;
@@ -58,7 +56,6 @@ export function BuilderHeader({
 	onRevert,
 	onSave,
 }: BuilderHeaderProps) {
-	const { toggleSidebar } = useSidebar();
 	const [isDebugOpen, setIsDebugOpen] = useState(false);
 	const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(
 		null
@@ -68,29 +65,10 @@ export function BuilderHeader({
 		<TooltipProvider>
 			<header className="sticky top-0 z-50 flex w-full items-center border-b bg-background shadow-sm">
 				<div className="flex h-14 w-full items-center gap-4 px-4">
-					{/* Sidebar Toggle */}
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								className="h-8 w-8"
-								onClick={toggleSidebar}
-								size="icon"
-								variant="ghost"
-							>
-								<IconMenu2 size={16} />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>Toggle sidebar</p>
-						</TooltipContent>
-					</Tooltip>
-
-					<Separator className="h-6" orientation="vertical" />
-
 					<div className="flex items-center gap-2">
 						<Link
 							className={buttonVariants({ variant: "ghost", size: "sm" })}
-							to="/dashboard/workflows"
+							to="/dashboard/projects"
 						>
 							<IconChevronLeft size={16} />
 						</Link>
@@ -125,12 +103,6 @@ export function BuilderHeader({
 								</TooltipContent>
 							</Tooltip>
 
-							<DebugView
-								isOpen={isDebugOpen}
-								onExecutionSelect={setSelectedExecutionId}
-								onOpenChange={setIsDebugOpen}
-								workflowId={workflowId || "current-workflow"}
-							/>
 						</div>
 
 						<Separator className="h-6" orientation="vertical" />

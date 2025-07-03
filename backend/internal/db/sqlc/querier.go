@@ -11,52 +11,89 @@ import (
 )
 
 type Querier interface {
-	ActivateWorkflowVersion(ctx context.Context, arg ActivateWorkflowVersionParams) error
-	// Agent-Workflow Association queries
-	AssociateAgentWithWorkflow(ctx context.Context, arg AssociateAgentWithWorkflowParams) (AgentWorkflow, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
-	CreateExecution(ctx context.Context, arg CreateExecutionParams) (Execution, error)
+	CreateAppConnection(ctx context.Context, arg CreateAppConnectionParams) (AppConnection, error)
+	CreateFlow(ctx context.Context, arg CreateFlowParams) (Flow, error)
+	CreateFlowRun(ctx context.Context, arg CreateFlowRunParams) (FlowRun, error)
+	CreateFlowVersion(ctx context.Context, arg CreateFlowVersionParams) (FlowVersion, error)
 	CreateIntegration(ctx context.Context, arg CreateIntegrationParams) (CreateIntegrationRow, error)
+	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	CreateStepRun(ctx context.Context, arg CreateStepRunParams) (StepRun, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	CreateWorkflow(ctx context.Context, arg CreateWorkflowParams) (Workflow, error)
-	CreateWorkflowVersion(ctx context.Context, arg CreateWorkflowVersionParams) (Workflow, error)
-	DeactivateWorkflowVersions(ctx context.Context, arg DeactivateWorkflowVersionsParams) error
 	DeleteAgent(ctx context.Context, id pgtype.UUID) error
-	DeleteAllWorkflowVersions(ctx context.Context, arg DeleteAllWorkflowVersionsParams) error
+	DeleteAppConnection(ctx context.Context, id pgtype.UUID) error
+	DeleteFlow(ctx context.Context, id pgtype.UUID) error
+	DeleteFlowRun(ctx context.Context, id pgtype.UUID) error
+	DeleteFlowVersion(ctx context.Context, id pgtype.UUID) error
 	DeleteIntegration(ctx context.Context, id pgtype.UUID) error
+	DeleteProject(ctx context.Context, id pgtype.UUID) error
 	DeleteSession(ctx context.Context, token string) error
+	DeleteStepRunsByFlowRunID(ctx context.Context, flowRunID pgtype.UUID) error
 	DeleteUser(ctx context.Context, id string) error
-	DeleteWorkflow(ctx context.Context, id pgtype.UUID) error
 	GetAccountByID(ctx context.Context, id string) (Account, error)
 	GetAccountByUserID(ctx context.Context, userID string) (Account, error)
 	GetAgentByID(ctx context.Context, id pgtype.UUID) (Agent, error)
-	GetAgentWorkflowAssociations(ctx context.Context, agentID pgtype.UUID) ([]AgentWorkflow, error)
 	GetAgentsByUserID(ctx context.Context, userID string) ([]Agent, error)
-	GetExecutionByID(ctx context.Context, id pgtype.UUID) (Execution, error)
-	GetExecutionsByAgentID(ctx context.Context, arg GetExecutionsByAgentIDParams) ([]Execution, error)
-	GetExecutionsByUserID(ctx context.Context, arg GetExecutionsByUserIDParams) ([]Execution, error)
-	GetExecutionsByWorkflowID(ctx context.Context, arg GetExecutionsByWorkflowIDParams) ([]Execution, error)
+	GetAppConnectionByID(ctx context.Context, id pgtype.UUID) (AppConnection, error)
+	GetAppConnectionByName(ctx context.Context, arg GetAppConnectionByNameParams) (AppConnection, error)
+	GetAppConnectionsByAppName(ctx context.Context, arg GetAppConnectionsByAppNameParams) ([]AppConnection, error)
+	// App Connections queries (external service integrations)
+	GetAppConnectionsByProjectID(ctx context.Context, projectID pgtype.UUID) ([]AppConnection, error)
+	GetEnabledFlows(ctx context.Context) ([]Flow, error)
+	GetFlowByID(ctx context.Context, id pgtype.UUID) (GetFlowByIDRow, error)
+	GetFlowRunByID(ctx context.Context, id pgtype.UUID) (GetFlowRunByIDRow, error)
+	GetFlowRunStats(ctx context.Context, arg GetFlowRunStatsParams) (GetFlowRunStatsRow, error)
+	GetFlowRunsByFlowID(ctx context.Context, arg GetFlowRunsByFlowIDParams) ([]GetFlowRunsByFlowIDRow, error)
+	// Flow Runs queries (execution instances)
+	GetFlowRunsByProjectID(ctx context.Context, arg GetFlowRunsByProjectIDParams) ([]GetFlowRunsByProjectIDRow, error)
+	GetFlowRunsByStatus(ctx context.Context, arg GetFlowRunsByStatusParams) ([]FlowRun, error)
+	GetFlowRunsWithFilters(ctx context.Context, arg GetFlowRunsWithFiltersParams) ([]GetFlowRunsWithFiltersRow, error)
+	GetFlowVersionByID(ctx context.Context, id pgtype.UUID) (FlowVersion, error)
+	GetFlowVersionByVersion(ctx context.Context, arg GetFlowVersionByVersionParams) (FlowVersion, error)
+	// Flow Versions queries (versioned flow definitions)
+	GetFlowVersionsByFlowID(ctx context.Context, flowID pgtype.UUID) ([]FlowVersion, error)
+	GetFlowVersionsWithRuns(ctx context.Context, flowID pgtype.UUID) ([]GetFlowVersionsWithRunsRow, error)
+	// Flows queries (flow definitions)
+	GetFlowsByProjectID(ctx context.Context, projectID pgtype.UUID) ([]GetFlowsByProjectIDRow, error)
 	GetIntegrationByID(ctx context.Context, id pgtype.UUID) (Integration, error)
 	GetIntegrationsByUserID(ctx context.Context, userID string) ([]GetIntegrationsByUserIDRow, error)
-	GetLatestWorkflowVersionByName(ctx context.Context, arg GetLatestWorkflowVersionByNameParams) (Workflow, error)
+	GetLatestFlowVersion(ctx context.Context, flowID pgtype.UUID) (FlowVersion, error)
+	GetNextVersionNumber(ctx context.Context, flowID pgtype.UUID) (int32, error)
+	GetProjectByID(ctx context.Context, id pgtype.UUID) (Project, error)
+	GetProjectUsage(ctx context.Context, id pgtype.UUID) (GetProjectUsageRow, error)
+	// Projects queries
+	GetProjectsByOwnerID(ctx context.Context, ownerID string) ([]Project, error)
+	GetPublishedFlowVersion(ctx context.Context, flowID pgtype.UUID) (FlowVersion, error)
+	GetRunningFlowRuns(ctx context.Context) ([]GetRunningFlowRunsRow, error)
+	GetRunningStepRuns(ctx context.Context) ([]GetRunningStepRunsRow, error)
+	GetScheduledFlows(ctx context.Context) ([]Flow, error)
 	GetSessionByID(ctx context.Context, id string) (Session, error)
 	GetSessionByToken(ctx context.Context, token string) (Session, error)
+	GetStepRunByFlowRunAndName(ctx context.Context, arg GetStepRunByFlowRunAndNameParams) (StepRun, error)
+	GetStepRunByID(ctx context.Context, id pgtype.UUID) (StepRun, error)
+	GetStepRunStats(ctx context.Context, flowRunID pgtype.UUID) (GetStepRunStatsRow, error)
+	GetStepRunsByFlowRunID(ctx context.Context, flowRunID pgtype.UUID) ([]StepRun, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
-	GetUserIDByWorkflowID(ctx context.Context, id pgtype.UUID) (string, error)
-	GetWorkflowByID(ctx context.Context, id pgtype.UUID) (Workflow, error)
-	GetWorkflowVersion(ctx context.Context, arg GetWorkflowVersionParams) (Workflow, error)
-	GetWorkflowVersionHistory(ctx context.Context, arg GetWorkflowVersionHistoryParams) ([]Workflow, error)
-	GetWorkflowsByAgentID(ctx context.Context, agentID pgtype.UUID) ([]Workflow, error)
-	GetWorkflowsByUserID(ctx context.Context, userID string) ([]Workflow, error)
-	RemoveAgentWorkflowAssociation(ctx context.Context, arg RemoveAgentWorkflowAssociationParams) error
-	SetPrimaryWorkflowForAgent(ctx context.Context, arg SetPrimaryWorkflowForAgentParams) error
+	PublishFlowVersion(ctx context.Context, arg PublishFlowVersionParams) error
+	RetryFlowRun(ctx context.Context, id pgtype.UUID) (FlowRun, error)
 	UpdateAgent(ctx context.Context, arg UpdateAgentParams) (Agent, error)
-	UpdateExecutionStatus(ctx context.Context, arg UpdateExecutionStatusParams) (Execution, error)
+	UpdateAppConnection(ctx context.Context, arg UpdateAppConnectionParams) (AppConnection, error)
+	UpdateAppConnectionStatus(ctx context.Context, arg UpdateAppConnectionStatusParams) error
+	UpdateFlow(ctx context.Context, arg UpdateFlowParams) (Flow, error)
+	UpdateFlowRunPauseMetadata(ctx context.Context, arg UpdateFlowRunPauseMetadataParams) error
+	UpdateFlowRunStatus(ctx context.Context, arg UpdateFlowRunStatusParams) error
+	UpdateFlowRunStatusWithFinishTime(ctx context.Context, arg UpdateFlowRunStatusWithFinishTimeParams) error
+	UpdateFlowStatus(ctx context.Context, arg UpdateFlowStatusParams) error
+	UpdateFlowVersion(ctx context.Context, arg UpdateFlowVersionParams) (FlowVersion, error)
+	UpdateFlowVersionStatus(ctx context.Context, arg UpdateFlowVersionStatusParams) error
 	UpdateIntegration(ctx context.Context, arg UpdateIntegrationParams) (UpdateIntegrationRow, error)
+	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
+	UpdateStepRunError(ctx context.Context, arg UpdateStepRunErrorParams) (StepRun, error)
+	UpdateStepRunOutput(ctx context.Context, arg UpdateStepRunOutputParams) (StepRun, error)
+	UpdateStepRunStatus(ctx context.Context, arg UpdateStepRunStatusParams) (StepRun, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
-	UpdateWorkflow(ctx context.Context, arg UpdateWorkflowParams) (Workflow, error)
 }
 
 var _ Querier = (*Queries)(nil)

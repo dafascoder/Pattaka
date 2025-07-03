@@ -36,41 +36,71 @@ type Agent struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
-type AgentWorkflow struct {
-	ID         pgtype.UUID        `json:"id"`
-	AgentID    pgtype.UUID        `json:"agent_id"`
-	WorkflowID pgtype.UUID        `json:"workflow_id"`
-	IsPrimary  pgtype.Bool        `json:"is_primary"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+type AppConnection struct {
+	ID          pgtype.UUID        `json:"id"`
+	ProjectID   pgtype.UUID        `json:"project_id"`
+	Name        string             `json:"name"`
+	AppName     string             `json:"app_name"`
+	Config      []byte             `json:"config"`
+	Credentials []byte             `json:"credentials"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
-type Execution struct {
-	ID              pgtype.UUID        `json:"id"`
-	WorkflowID      pgtype.UUID        `json:"workflow_id"`
-	AgentID         pgtype.UUID        `json:"agent_id"`
-	Status          pgtype.Text        `json:"status"`
-	InputData       []byte             `json:"input_data"`
-	OutputData      []byte             `json:"output_data"`
-	ErrorMessage    pgtype.Text        `json:"error_message"`
-	ExecutionTimeMs pgtype.Int4        `json:"execution_time_ms"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+type FileStorage struct {
+	ID        pgtype.UUID        `json:"id"`
+	ProjectID pgtype.UUID        `json:"project_id"`
+	Filename  string             `json:"filename"`
+	Size      int32              `json:"size"`
+	Data      []byte             `json:"data"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
-type ExecutionStep struct {
+type Flow struct {
+	ID        pgtype.UUID        `json:"id"`
+	ProjectID pgtype.UUID        `json:"project_id"`
+	FolderID  pgtype.UUID        `json:"folder_id"`
+	Status    pgtype.Text        `json:"status"`
+	Schedule  []byte             `json:"schedule"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FlowRun struct {
 	ID              pgtype.UUID        `json:"id"`
-	ExecutionID     pgtype.UUID        `json:"execution_id"`
-	StepName        string             `json:"step_name"`
-	StepType        string             `json:"step_type"`
+	FlowVersionID   pgtype.UUID        `json:"flow_version_id"`
+	ProjectID       pgtype.UUID        `json:"project_id"`
 	Status          pgtype.Text        `json:"status"`
-	InputData       []byte             `json:"input_data"`
-	OutputData      []byte             `json:"output_data"`
-	ErrorMessage    pgtype.Text        `json:"error_message"`
-	ExecutionTimeMs pgtype.Int4        `json:"execution_time_ms"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	StartTime       pgtype.Timestamptz `json:"start_time"`
+	FinishTime      pgtype.Timestamptz `json:"finish_time"`
+	Environment     pgtype.Text        `json:"environment"`
+	FlowDisplayName pgtype.Text        `json:"flow_display_name"`
+	LogsFileID      pgtype.UUID        `json:"logs_file_id"`
+	Tags            []string           `json:"tags"`
+	PauseMetadata   []byte             `json:"pause_metadata"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FlowVersion struct {
+	ID          pgtype.UUID        `json:"id"`
+	FlowID      pgtype.UUID        `json:"flow_id"`
+	Version     int32              `json:"version"`
+	DisplayName string             `json:"display_name"`
+	Trigger     []byte             `json:"trigger"`
+	Steps       []byte             `json:"steps"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Folder struct {
+	ID          pgtype.UUID        `json:"id"`
+	DisplayName string             `json:"display_name"`
+	ProjectID   pgtype.UUID        `json:"project_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Integration struct {
@@ -85,6 +115,19 @@ type Integration struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Project struct {
+	ID              pgtype.UUID        `json:"id"`
+	DisplayName     string             `json:"display_name"`
+	OwnerID         string             `json:"owner_id"`
+	PlatformID      pgtype.UUID        `json:"platform_id"`
+	NotifyStatus    pgtype.Text        `json:"notify_status"`
+	ExternalID      pgtype.Text        `json:"external_id"`
+	ReleasesEnabled pgtype.Bool        `json:"releases_enabled"`
+	Metadata        []byte             `json:"metadata"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Session struct {
 	ID        string           `json:"id"`
 	ExpiresAt pgtype.Timestamp `json:"expiresAt"`
@@ -94,6 +137,30 @@ type Session struct {
 	IpAddress pgtype.Text      `json:"ipAddress"`
 	UserAgent pgtype.Text      `json:"userAgent"`
 	UserId    string           `json:"userId"`
+}
+
+type StepRun struct {
+	ID           pgtype.UUID        `json:"id"`
+	FlowRunID    pgtype.UUID        `json:"flow_run_id"`
+	StepName     string             `json:"step_name"`
+	Status       pgtype.Text        `json:"status"`
+	Input        []byte             `json:"input"`
+	Output       []byte             `json:"output"`
+	ErrorMessage pgtype.Text        `json:"error_message"`
+	Duration     pgtype.Int4        `json:"duration"`
+	StartTime    pgtype.Timestamptz `json:"start_time"`
+	FinishTime   pgtype.Timestamptz `json:"finish_time"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TriggerEvent struct {
+	ID        pgtype.UUID        `json:"id"`
+	FlowID    pgtype.UUID        `json:"flow_id"`
+	ProjectID pgtype.UUID        `json:"project_id"`
+	SourceID  pgtype.Text        `json:"source_id"`
+	Payload   []byte             `json:"payload"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {
@@ -114,16 +181,4 @@ type Verification struct {
 	ExpiresAt  pgtype.Timestamp `json:"expiresAt"`
 	CreatedAt  pgtype.Timestamp `json:"createdAt"`
 	UpdatedAt  pgtype.Timestamp `json:"updatedAt"`
-}
-
-type Workflow struct {
-	ID          pgtype.UUID        `json:"id"`
-	UserID      string             `json:"user_id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description"`
-	Definition  []byte             `json:"definition"`
-	Version     pgtype.Int4        `json:"version"`
-	IsActive    pgtype.Bool        `json:"is_active"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }

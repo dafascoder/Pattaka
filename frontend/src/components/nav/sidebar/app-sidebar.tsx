@@ -44,24 +44,9 @@ const data = {
 			icon: IconDashboard,
 		},
 		{
-			title: "Workflows",
-			url: "/dashboard/workflows",
+			title: "Projects",
+			url: "/dashboard/projects",
 			icon: IconGitBranch,
-		},
-		{
-			title: "Integrations",
-			url: "/dashboard/integrations",
-			icon: IconPlug,
-		},
-		{
-			title: "Executions",
-			url: "/dashboard/executions",
-			icon: IconActivity,
-		},
-		{
-			title: "Builder",
-			url: "/dashboard/builder",
-			icon: IconPlaylistAdd,
 		},
 		{
 			title: "Settings",

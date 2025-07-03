@@ -12,22 +12,24 @@ import (
 
 type Router struct {
 	agentHandler       *handlers.AgentHandler
-	workflowHandler    *handlers.WorkflowHandler
 	integrationHandler *handlers.IntegrationHandler
-	executionHandler   *handlers.ExecutionHandler
 	authHandler        *handlers.AuthHandler
 	userHandler        *handlers.UserHandler
+	projectHandler     *handlers.ProjectHandler
+	flowHandler        *handlers.FlowHandler
+	websocketHandler   *handlers.WebSocketHandler
 	logger             *logger.Logger
 }
 
-func NewRouter(agentService *services.AgentService, userService *services.UserService, workflowService *services.WorkflowService, integrationService *services.IntegrationService, executionService *services.ExecutionService, authService *services.AuthService) *Router {
+func NewRouter(agentService *services.AgentService, userService *services.UserService, integrationService *services.IntegrationService, authService *services.AuthService, projectService *services.ProjectService, flowService *services.FlowService) *Router {
 	return &Router{
 		agentHandler:       handlers.NewAgentHandler(agentService),
-		workflowHandler:    handlers.NewWorkflowHandler(workflowService),
 		integrationHandler: handlers.NewIntegrationHandler(integrationService),
-		executionHandler:   handlers.NewExecutionHandler(executionService),
 		authHandler:        handlers.NewAuthHandler(authService),
 		userHandler:        handlers.NewUserHandler(userService),
+		projectHandler:     handlers.NewProjectHandler(projectService),
+		flowHandler:        handlers.NewFlowHandler(flowService),
+		websocketHandler:   handlers.NewWebSocketHandler(),
 		logger:             logger.Get(),
 	}
 }
@@ -61,50 +63,53 @@ func (r *Router) integrationByIDHandler(w http.ResponseWriter, req *http.Request
 	}
 }
 
-// executionsHandler routes execution requests to appropriate handlers
-func (r *Router) executionsHandler(w http.ResponseWriter, req *http.Request) {
+// projectsHandler routes project requests to appropriate handlers
+func (r *Router) projectsHandler(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
-		r.executionHandler.GetExecutions(w, req)
+		r.projectHandler.GetProjects(w, req)
 	case "POST":
-		r.executionHandler.CreateExecution(w, req)
+		r.projectHandler.CreateProject(w, req)
 	default:
 		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (r *Router) executionByIDHandler(w http.ResponseWriter, req *http.Request) {
+// projectByIDHandler routes individual project requests
+func (r *Router) projectByIDHandler(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
-		r.executionHandler.GetExecution(w, req)
+		r.projectHandler.GetProject(w, req)
 	case "PUT":
-		r.executionHandler.UpdateExecutionStatus(w, req)
-	default:
-		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// workflowsHandler routes workflow requests to appropriate handlers
-func (r *Router) workflowsHandler(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case "GET":
-		r.workflowHandler.GetWorkflows(w, req)
-	case "POST":
-		r.workflowHandler.CreateWorkflow(w, req)
-	default:
-		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// workflowByIDHandler routes individual workflow requests
-func (r *Router) workflowByIDHandler(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case "GET":
-		r.workflowHandler.GetWorkflow(w, req)
-	case "PUT":
-		r.workflowHandler.UpdateWorkflow(w, req)
+		r.projectHandler.UpdateProject(w, req)
 	case "DELETE":
-		r.workflowHandler.DeleteWorkflow(w, req)
+		r.projectHandler.DeleteProject(w, req)
+	default:
+		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// flowsHandler routes flow requests to appropriate handlers
+func (r *Router) flowsHandler(w http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case "GET":
+		r.flowHandler.GetFlows(w, req)
+	case "POST":
+		r.flowHandler.CreateFlow(w, req)
+	default:
+		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// flowByIDHandler routes individual flow requests
+func (r *Router) flowByIDHandler(w http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case "GET":
+		r.flowHandler.GetFlow(w, req)
+	case "PUT":
+		r.flowHandler.UpdateFlow(w, req)
+	case "DELETE":
+		r.flowHandler.DeleteFlow(w, req)
 	default:
 		utils.RespondWithError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -147,25 +152,36 @@ func (router *Router) SetupRoutesWithMiddleware(middlewareChain MiddlewareFunc) 
 	mux.HandleFunc("/api/integrations", applyMiddleware(router.integrationsHandler))
 	mux.HandleFunc("/api/integrations/", applyMiddleware(router.integrationByIDHandler))
 
-	// Executions endpoints
-	mux.HandleFunc("/api/executions", applyMiddleware(router.executionsHandler))
-	mux.HandleFunc("/api/executions/", applyMiddleware(router.executionByIDHandler))
+	// Project endpoints
+	mux.HandleFunc("/api/v1/projects", applyMiddleware(router.projectsHandler))
+	mux.HandleFunc("/api/v1/projects/", applyMiddleware(router.projectByIDHandler))
 
-	// Additional execution routes with specific paths
-	mux.HandleFunc("/api/executions/{id}/status", applyMiddleware(router.executionHandler.UpdateExecutionStatus))
-	mux.HandleFunc("/api/executions/{id}/steps", applyMiddleware(router.executionHandler.GetExecutionSteps))
-	mux.HandleFunc("/api/executions/{id}/cancel", applyMiddleware(router.executionHandler.CancelExecution))
+	// Flow endpoints (project-scoped)
+	mux.HandleFunc("/api/v1/projects/{projectId}/flows", applyMiddleware(router.flowsHandler))
+	mux.HandleFunc("/api/v1/projects/{projectId}/flows/", applyMiddleware(router.flowByIDHandler))
 
-	// Workflow execution routes
-	mux.HandleFunc("/api/workflows/{workflowId}/executions", applyMiddleware(router.executionHandler.GetExecutionsByWorkflow))
-	mux.HandleFunc("/api/workflows/{workflowId}/execute", applyMiddleware(router.executionHandler.ExecuteWorkflow))
+	// Flow version endpoints
+	mux.HandleFunc("/api/v1/flows/{flowId}/versions", applyMiddleware(router.flowHandler.HandleFlowVersions))
+	mux.HandleFunc("/api/v1/flows/{flowId}/versions/", applyMiddleware(router.flowHandler.HandleFlowVersion))
 
-	// Agent execution routes
-	mux.HandleFunc("/api/agents/{agentId}/executions", applyMiddleware(router.executionHandler.GetExecutionsByAgent))
+	// Flow run endpoints
+	mux.HandleFunc("/api/v1/projects/{projectId}/flow-runs", applyMiddleware(router.flowHandler.HandleFlowRuns))
+	mux.HandleFunc("/api/v1/flow-runs/", applyMiddleware(router.flowHandler.HandleFlowRun))
 
-	// Workflows endpoints
-	mux.HandleFunc("/api/workflows", applyMiddleware(router.workflowsHandler))
-	mux.HandleFunc("/api/workflows/", applyMiddleware(router.workflowByIDHandler))
+	// Flow execution endpoints
+	mux.HandleFunc("/api/v1/flows/{flowId}/execute", applyMiddleware(router.flowHandler.ExecuteFlow))
+	mux.HandleFunc("/api/v1/flow-runs/{runId}/pause", applyMiddleware(router.flowHandler.PauseFlowRun))
+	mux.HandleFunc("/api/v1/flow-runs/{runId}/resume", applyMiddleware(router.flowHandler.ResumeFlowRun))
+	mux.HandleFunc("/api/v1/flow-runs/{runId}/cancel", applyMiddleware(router.flowHandler.CancelFlowRun))
+
+	// Step run endpoints
+	mux.HandleFunc("/api/v1/flow-runs/{runId}/steps", applyMiddleware(router.flowHandler.GetStepRuns))
+
+	// WebSocket endpoints (apply auth middleware but not CORS to avoid interfering with WebSocket upgrade)
+	authOnlyMiddleware := func(handler http.HandlerFunc) http.HandlerFunc {
+		return middleware.AuthMiddleware(router.logger)(handler)
+	}
+	mux.HandleFunc("/ws/execution", authOnlyMiddleware(router.websocketHandler.HandleExecutionWebSocket))
 
 	return mux
 }

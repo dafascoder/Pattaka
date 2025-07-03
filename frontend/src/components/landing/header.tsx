@@ -34,10 +34,10 @@ const Header = () => {
 						size="sm"
 						variant="outline"
 					>
-						<Link to="/login">Sign In</Link>
+						<Link to="/auth/login">Sign In</Link>
 					</Button>
 					<Button asChild size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700">
-						<Link to="/register">Start Free</Link>
+						<Link to="/auth/register">Start Free</Link>
 					</Button>
 				</div>
 			</div>

@@ -10,6 +10,7 @@ import (
 
 	"backend/internal/config"
 	"backend/internal/db"
+	"backend/internal/handlers"
 	"backend/internal/logger"
 	"backend/internal/middleware"
 	"backend/internal/route"
@@ -49,15 +50,19 @@ func main() {
 
 	// Initialize services
 	agentService := services.NewAgentService(database)
-	workflowService := services.NewWorkflowService(database)
 	integrationService := services.NewIntegrationService(database)
-	executionService := services.NewExecutionService(database)
 	authService := services.NewAuthService(database)
 	userService := services.NewUserService(database)
+	projectService := services.NewProjectService(database)
+	flowService := services.NewFlowService(database)
 	log.Info("Services initialized")
 
 	// Initialize router
-	router := route.NewRouter(agentService, userService, workflowService, integrationService, executionService, authService)
+	router := route.NewRouter(agentService, userService, integrationService, authService, projectService, flowService)
+
+	// Initialize WebSocket hub for real-time execution updates
+	_ = handlers.GetWebSocketHub()
+	log.Info("WebSocket hub initialized")
 
 	// Setup middleware chain
 	allowedOrigins := []string{
