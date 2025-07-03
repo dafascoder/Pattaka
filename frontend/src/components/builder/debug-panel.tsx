@@ -93,22 +93,49 @@ export function DebugPanel({ isOpen, onClose, execution, projectId }: DebugPanel
           id: `${Date.now()}-${Math.random()}`,
           timestamp,
           level: 'info',
-          message: `Step "${event.stepName}" started`,
+          message: `Step "${event.stepName}" started (${event.data?.stepType || 'unknown type'})`,
           stepName: event.stepName,
-          data: event.data,
+          data: {
+            stepType: event.data?.stepType,
+            stepConfiguration: event.data?.stepData,
+            context: event.data?.context,
+          },
         };
         break;
         
       case 'step_completed':
+        // Handle both success and failure cases
+        const isSuccess = event.status === 'SUCCEEDED';
+        const isFailed = event.status === 'FAILED';
+        
         log = {
           id: `${Date.now()}-${Math.random()}`,
           timestamp,
-          level: 'success',
-          message: `Step "${event.stepName}" completed (${event.status})`,
+          level: isSuccess ? 'success' : isFailed ? 'error' : 'warning',
+          message: `Step "${event.stepName}" ${isSuccess ? 'completed successfully' : isFailed ? 'failed' : 'completed'} ${event.duration ? `(${event.duration}ms)` : ''}`,
           stepName: event.stepName,
           duration: event.duration,
-          data: event.data,
+          data: {
+            stepType: event.data?.stepType,
+            status: event.status,
+            output: event.data?.output,
+            error: event.error,
+            executionDetails: {
+              duration: event.duration,
+              timestamp: event.timestamp,
+            }
+          },
         };
+        
+        // If step failed, also update the run status
+        if (isFailed && execution) {
+          const updatedRun: FlowRun = {
+            ...execution,
+            status: 'FAILED',
+            finishTime: event.timestamp,
+          };
+          setRun(updatedRun);
+        }
         break;
         
       case 'step_error':
@@ -119,7 +146,11 @@ export function DebugPanel({ isOpen, onClose, execution, projectId }: DebugPanel
           message: `Step "${event.stepName}" failed: ${event.error}`,
           stepName: event.stepName,
           duration: event.duration,
-          data: event.data,
+          data: {
+            stepType: event.data?.stepType,
+            error: event.error,
+            errorDetails: event.data,
+          },
         };
         
         // Update the run status to FAILED when a step fails
@@ -138,9 +169,14 @@ export function DebugPanel({ isOpen, onClose, execution, projectId }: DebugPanel
           id: `${Date.now()}-${Math.random()}`,
           timestamp,
           level: event.status === 'SUCCEEDED' ? 'success' : 'error',
-          message: `Flow completed with status: ${event.status}${event.error ? ` - ${event.error}` : ''}`,
+          message: `Flow completed with status: ${event.status}${event.error ? ` - ${event.error}` : ''}${event.duration ? ` (${event.duration}ms total)` : ''}`,
           duration: event.duration,
-          data: event.data,
+          data: {
+            finalStatus: event.status,
+            totalDuration: event.duration,
+            flowSummary: event.data,
+            error: event.error,
+          },
         };
         
         // Update the run status in the store when flow completes
@@ -165,7 +201,7 @@ export function DebugPanel({ isOpen, onClose, execution, projectId }: DebugPanel
     }
     
     setLogs(prev => [...prev, log]);
-  }, []);
+  }, [execution, setRun]);
 
   // Connect to WebSocket when debug panel opens or execution changes
   useEffect(() => {
@@ -296,7 +332,7 @@ export function DebugPanel({ isOpen, onClose, execution, projectId }: DebugPanel
 
     return (
       <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-96 sm:max-w-md">
+      <SheetContent side="top" className="w-screen">
         <SheetHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -387,15 +423,81 @@ export function DebugPanel({ isOpen, onClose, execution, projectId }: DebugPanel
                           )}
                         </div>
                         <p className="break-words">{log.message}</p>
+                        
+                        {/* Enhanced data display for different log types */}
                         {log.data && Object.keys(log.data).length > 0 && (
-                          <details className="mt-1">
-                            <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
-                              View data
-                            </summary>
-                            <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-auto max-h-20">
-                              {JSON.stringify(log.data, null, 2)}
-                            </pre>
-                          </details>
+                          <div className="mt-2 space-y-1">
+                            {/* Step-specific information */}
+                            {log.stepName && log.data.stepType && (
+                              <div className="text-xs">
+                                <span className="font-medium">Type:</span> {String(log.data.stepType)}
+                              </div>
+                            )}
+                            
+                            {/* Show step output for completed steps */}
+                            {log.data.output && (
+                              <details className="mt-1">
+                                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground font-medium">
+                                  Step Output
+                                </summary>
+                                <div className="mt-1 text-xs bg-muted p-2 rounded overflow-auto max-h-32">
+                                  {typeof log.data.output === 'object' && log.data.output !== null ? (
+                                    <div className="space-y-1">
+                                      {Object.entries(log.data.output as Record<string, any>).map(([key, value]) => (
+                                        <div key={key} className="flex flex-col gap-1">
+                                          <span className="font-medium text-foreground">{key}:</span>
+                                          <span className="text-muted-foreground ml-2 break-all">
+                                            {typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value ?? '')}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span>{String(log.data.output ?? '')}</span>
+                                  )}
+                                </div>
+                              </details>
+                            )}
+                            
+                            {/* Show step configuration for started steps */}
+                            {log.data.stepConfiguration && (
+                              <details className="mt-1">
+                                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground font-medium">
+                                  Step Configuration
+                                </summary>
+                                <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-auto max-h-32">
+                                  {JSON.stringify(log.data.stepConfiguration, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                            
+                            {/* Show error details for failed steps */}
+                            {log.data.error && (
+                              <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded">
+                                <div className="text-xs font-medium text-red-800 mb-1">Error Details:</div>
+                                <div className="text-xs text-red-700 break-words">{String(log.data.error ?? '')}</div>
+                              </div>
+                            )}
+                            
+                            {/* Show execution details */}
+                            {log.data.executionDetails && typeof log.data.executionDetails === 'object' && log.data.executionDetails !== null && 'duration' in log.data.executionDetails && (
+                              <div className="text-xs text-muted-foreground">
+                                <span className="font-medium">Duration:</span> {String((log.data.executionDetails as { duration?: number }).duration ?? 0)}ms
+                              </div>
+                            )}
+                            
+                            {/* General data fallback */}
+                            {!log.data.output && !log.data.stepConfiguration && !log.data.error && (
+                              <details className="mt-1">
+                                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+                                  View raw data
+                                </summary>
+                                <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-auto max-h-20">
+                                  {JSON.stringify(log.data, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

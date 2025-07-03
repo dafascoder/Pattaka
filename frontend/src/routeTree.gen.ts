@@ -18,7 +18,6 @@ import { Route as AuthLayoutRouteImport } from './routes/auth/_layout'
 import { Route as authenticatedBuilderRouteImport } from './routes/(authenticated)/builder'
 import { Route as authenticatedDashboardLayoutRouteImport } from './routes/(authenticated)/dashboard/_layout'
 import { Route as authenticatedDashboardLayoutIndexRouteImport } from './routes/(authenticated)/dashboard/_layout.index'
-import { Route as authenticatedDashboardProjectProjectIdRouteImport } from './routes/(authenticated)/dashboard/project/$projectId'
 import { Route as authenticatedDashboardLayoutProjectsRouteImport } from './routes/(authenticated)/dashboard/_layout.projects'
 import { Route as authenticatedDashboardLayoutProjectProjectIdRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId'
 import { Route as authenticatedDashboardLayoutProjectProjectIdIndexRouteImport } from './routes/(authenticated)/dashboard/_layout.project.$projectId.index'
@@ -77,12 +76,6 @@ const authenticatedDashboardLayoutIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => authenticatedDashboardLayoutRoute,
-  } as any)
-const authenticatedDashboardProjectProjectIdRoute =
-  authenticatedDashboardProjectProjectIdRouteImport.update({
-    id: '/project/$projectId',
-    path: '/project/$projectId',
-    getParentRoute: () => authenticatedDashboardRoute,
   } as any)
 const authenticatedDashboardLayoutProjectsRoute =
   authenticatedDashboardLayoutProjectsRouteImport.update({
@@ -144,8 +137,8 @@ export interface FileRoutesByFullPath {
   '/': typeof landingIndexRoute
   '/dashboard': typeof authenticatedDashboardLayoutRouteWithChildren
   '/dashboard/projects': typeof authenticatedDashboardLayoutProjectsRoute
-  '/dashboard/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdRouteWithChildren
   '/dashboard/': typeof authenticatedDashboardLayoutIndexRoute
+  '/dashboard/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdRouteWithChildren
   '/dashboard/project/$projectId/connections': typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
   '/dashboard/project/$projectId/executions': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren
   '/dashboard/project/$projectId/flows': typeof authenticatedDashboardLayoutProjectProjectIdFlowsRoute
@@ -161,11 +154,11 @@ export interface FileRoutesByTo {
   '/': typeof landingIndexRoute
   '/dashboard': typeof authenticatedDashboardLayoutIndexRoute
   '/dashboard/projects': typeof authenticatedDashboardLayoutProjectsRoute
-  '/dashboard/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdIndexRoute
   '/dashboard/project/$projectId/connections': typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
   '/dashboard/project/$projectId/executions': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRouteWithChildren
   '/dashboard/project/$projectId/flows': typeof authenticatedDashboardLayoutProjectProjectIdFlowsRoute
   '/dashboard/project/$projectId/settings': typeof authenticatedDashboardLayoutProjectProjectIdSettingsRoute
+  '/dashboard/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdIndexRoute
   '/dashboard/project/$projectId/executions/$runId': typeof authenticatedDashboardLayoutProjectProjectIdExecutionsRunIdRoute
 }
 export interface FileRoutesById {
@@ -179,7 +172,6 @@ export interface FileRoutesById {
   '/(authenticated)/dashboard': typeof authenticatedDashboardRouteWithChildren
   '/(authenticated)/dashboard/_layout': typeof authenticatedDashboardLayoutRouteWithChildren
   '/(authenticated)/dashboard/_layout/projects': typeof authenticatedDashboardLayoutProjectsRoute
-  '/(authenticated)/dashboard/project/$projectId': typeof authenticatedDashboardProjectProjectIdRoute
   '/(authenticated)/dashboard/_layout/': typeof authenticatedDashboardLayoutIndexRoute
   '/(authenticated)/dashboard/_layout/project/$projectId': typeof authenticatedDashboardLayoutProjectProjectIdRouteWithChildren
   '/(authenticated)/dashboard/_layout/project/$projectId/connections': typeof authenticatedDashboardLayoutProjectProjectIdConnectionsRoute
@@ -199,8 +191,8 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/dashboard/projects'
-    | '/dashboard/project/$projectId'
     | '/dashboard/'
+    | '/dashboard/project/$projectId'
     | '/dashboard/project/$projectId/connections'
     | '/dashboard/project/$projectId/executions'
     | '/dashboard/project/$projectId/flows'
@@ -216,11 +208,11 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/dashboard/projects'
-    | '/dashboard/project/$projectId'
     | '/dashboard/project/$projectId/connections'
     | '/dashboard/project/$projectId/executions'
     | '/dashboard/project/$projectId/flows'
     | '/dashboard/project/$projectId/settings'
+    | '/dashboard/project/$projectId'
     | '/dashboard/project/$projectId/executions/$runId'
   id:
     | '__root__'
@@ -233,7 +225,6 @@ export interface FileRouteTypes {
     | '/(authenticated)/dashboard'
     | '/(authenticated)/dashboard/_layout'
     | '/(authenticated)/dashboard/_layout/projects'
-    | '/(authenticated)/dashboard/project/$projectId'
     | '/(authenticated)/dashboard/_layout/'
     | '/(authenticated)/dashboard/_layout/project/$projectId'
     | '/(authenticated)/dashboard/_layout/project/$projectId/connections'
@@ -315,13 +306,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof authenticatedDashboardLayoutIndexRouteImport
       parentRoute: typeof authenticatedDashboardLayoutRoute
-    }
-    '/(authenticated)/dashboard/project/$projectId': {
-      id: '/(authenticated)/dashboard/project/$projectId'
-      path: '/project/$projectId'
-      fullPath: '/dashboard/project/$projectId'
-      preLoaderRoute: typeof authenticatedDashboardProjectProjectIdRouteImport
-      parentRoute: typeof authenticatedDashboardRoute
     }
     '/(authenticated)/dashboard/_layout/projects': {
       id: '/(authenticated)/dashboard/_layout/projects'
@@ -461,15 +445,12 @@ const authenticatedDashboardLayoutRouteWithChildren =
 
 interface authenticatedDashboardRouteChildren {
   authenticatedDashboardLayoutRoute: typeof authenticatedDashboardLayoutRouteWithChildren
-  authenticatedDashboardProjectProjectIdRoute: typeof authenticatedDashboardProjectProjectIdRoute
 }
 
 const authenticatedDashboardRouteChildren: authenticatedDashboardRouteChildren =
   {
     authenticatedDashboardLayoutRoute:
       authenticatedDashboardLayoutRouteWithChildren,
-    authenticatedDashboardProjectProjectIdRoute:
-      authenticatedDashboardProjectProjectIdRoute,
   }
 
 const authenticatedDashboardRouteWithChildren =

@@ -15,6 +15,10 @@ import {
   IconMessage,
   IconFile,
   IconCalculator,
+  IconGitFork,
+  IconRotate,
+  IconList,
+  IconRoute,
 } from '@tabler/icons-react';
 
 export function getStepIcon(stepType: string, pieceType?: string): React.ElementType {
@@ -55,6 +59,18 @@ export function getStepIcon(stepType: string, pieceType?: string): React.Element
       case 'gcp':
       case 'azure':
         return IconCloud;
+      case 'if-else':
+      case 'condition':
+        return IconGitFork;
+      case 'loop':
+      case 'while':
+        return IconRotate;
+      case 'for-each':
+      case 'iterate':
+        return IconList;
+      case 'switch':
+      case 'router':
+        return IconRoute;
       default:
         // Fall through to step type
         break;
@@ -72,7 +88,14 @@ export function getStepIcon(stepType: string, pieceType?: string): React.Element
     case 'LOOP':
       return IconRepeat;
     case 'ROUTER':
+    case 'CONDITION':
       return IconGitBranch;
+    case 'IF_ELSE':
+      return IconGitFork;
+    case 'FOR_EACH':
+      return IconList;
+    case 'WHILE':
+      return IconRotate;
     default:
       return IconBolt;
   }
@@ -116,6 +139,18 @@ export function getStepColor(stepType: string, pieceType?: string): string {
       case 'gcp':
       case 'azure':
         return 'bg-sky-100 text-sky-700';
+      case 'if-else':
+      case 'condition':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'loop':
+      case 'while':
+        return 'bg-amber-100 text-amber-700';
+      case 'for-each':
+      case 'iterate':
+        return 'bg-rose-100 text-rose-700';
+      case 'switch':
+      case 'router':
+        return 'bg-violet-100 text-violet-700';
       default:
         // Fall through to step type
         break;
@@ -132,7 +167,14 @@ export function getStepColor(stepType: string, pieceType?: string): string {
     case 'LOOP':
       return 'bg-amber-100 text-amber-700';
     case 'ROUTER':
+    case 'CONDITION':
       return 'bg-yellow-100 text-yellow-700';
+    case 'IF_ELSE':
+      return 'bg-yellow-100 text-yellow-700';
+    case 'FOR_EACH':
+      return 'bg-rose-100 text-rose-700';
+    case 'WHILE':
+      return 'bg-amber-100 text-amber-700';
     default:
       return 'bg-gray-100 text-gray-700';
   }
@@ -147,8 +189,11 @@ export function getStepCategoryLabel(stepType: string): string {
     case 'CODE':
       return 'Code';
     case 'LOOP':
-      return 'Flow Control';
     case 'ROUTER':
+    case 'CONDITION':
+    case 'IF_ELSE':
+    case 'FOR_EACH':
+    case 'WHILE':
       return 'Flow Control';
     default:
       return 'Step';
@@ -195,6 +240,34 @@ export function validateStepConfiguration(step: any): { isValid: boolean; errors
             }
             if (!step.settings.subject) {
               errors.push('Email subject is required');
+            }
+            break;
+          case 'if-else':
+            if (!step.settings.condition) {
+              errors.push('Condition is required for If-Else');
+            }
+            break;
+          case 'loop':
+            if (!step.settings.condition) {
+              errors.push('Loop condition is required');
+            }
+            if (!step.settings.maxIterations) {
+              errors.push('Maximum iterations must be specified for safety');
+            } else if (step.settings.maxIterations > 1000) {
+              errors.push('Maximum iterations cannot exceed 1000');
+            }
+            break;
+          case 'for-each':
+            if (!step.settings.items && !step.settings.itemsExpression) {
+              errors.push('Items array or expression is required for For-Each');
+            }
+            break;
+          case 'switch':
+            if (!step.settings.expression) {
+              errors.push('Switch expression is required');
+            }
+            if (!step.settings.cases || step.settings.cases.length === 0) {
+              errors.push('At least one case is required for Switch');
             }
             break;
         }
@@ -307,6 +380,40 @@ export function getAvailablePieceTypes(): Array<{
       category: 'Utilities',
       icon: IconCalculator,
       color: getStepColor('ACTION', 'calculator'),
+    },
+    
+    // Flow Control
+    {
+      id: 'if-else',
+      name: 'If-Else Condition',
+      description: 'Execute different paths based on conditions',
+      category: 'Flow Control',
+      icon: IconGitFork,
+      color: getStepColor('ACTION', 'if-else'),
+    },
+    {
+      id: 'loop',
+      name: 'Loop',
+      description: 'Repeat actions while a condition is true',
+      category: 'Flow Control',
+      icon: IconRotate,
+      color: getStepColor('ACTION', 'loop'),
+    },
+    {
+      id: 'for-each',
+      name: 'For Each',
+      description: 'Iterate over a collection of items',
+      category: 'Flow Control',
+      icon: IconList,
+      color: getStepColor('ACTION', 'for-each'),
+    },
+    {
+      id: 'switch',
+      name: 'Switch',
+      description: 'Route to different paths based on a value',
+      category: 'Flow Control',
+      icon: IconRoute,
+      color: getStepColor('ACTION', 'switch'),
     },
   ];
 }

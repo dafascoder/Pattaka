@@ -4,10 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"backend/internal/db"
 	sqlc "backend/internal/db/sqlc"
+	"backend/internal/events"
 	"backend/internal/logger"
 
 	"github.com/google/uuid"
@@ -18,6 +22,30 @@ import (
 type ExecutionEngine struct {
 	db     *db.DB
 	logger *logger.Logger
+}
+
+// broadcastStepEvent broadcasts a step-level execution event
+func (e *ExecutionEngine) broadcastStepEvent(eventType string, flowRunID uuid.UUID, stepName string, status string, data map[string]interface{}, errorMsg string, duration int64) {
+	event := events.ExecutionEvent{
+		Type:      eventType,
+		Timestamp: time.Now(),
+		FlowRunID: flowRunID.String(),
+		StepName:  stepName,
+		Status:    status,
+		Data:      data,
+		Error:     errorMsg,
+		Duration:  duration,
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"event_type":  eventType,
+		"flow_run_id": flowRunID.String(),
+		"step_name":   stepName,
+		"status":      status,
+		"data_size":   len(data),
+	}).Debug("Broadcasting step execution event")
+
+	events.BroadcastExecutionEvent(event)
 }
 
 // NewExecutionEngine creates a new workflow execution engine
@@ -221,6 +249,7 @@ func (e *ExecutionEngine) executeStep(ctx context.Context, flowRunID uuid.UUID, 
 	}
 
 	stepType := getStepType(stepMap)
+	startTime := time.Now()
 
 	e.logger.WithFields(map[string]interface{}{
 		"flow_run_id": flowRunID.String(),
@@ -229,9 +258,20 @@ func (e *ExecutionEngine) executeStep(ctx context.Context, flowRunID uuid.UUID, 
 		"step_data":   stepMap,
 	}).Debug("Processing step")
 
+	// Broadcast step started event
+	e.broadcastStepEvent("step_started", flowRunID, stepName, "RUNNING", map[string]interface{}{
+		"stepType": stepType,
+		"stepData": stepMap,
+		"context":  context,
+	}, "", 0)
+
 	// Create step run
 	stepRun, err := e.createStepRun(ctx, flowRunID, stepName, stepMap)
 	if err != nil {
+		// Broadcast step failed event
+		e.broadcastStepEvent("step_completed", flowRunID, stepName, "FAILED", map[string]interface{}{
+			"stepType": stepType,
+		}, fmt.Sprintf("Failed to create step run: %v", err), time.Since(startTime).Milliseconds())
 		return nil, fmt.Errorf("failed to create step run for '%s': %w", stepName, err)
 	}
 
@@ -267,13 +307,29 @@ func (e *ExecutionEngine) executeStep(ctx context.Context, flowRunID uuid.UUID, 
 		if updateErr := e.failStepRun(ctx, stepRun.ID, err.Error()); updateErr != nil {
 			e.logger.WithError(updateErr).WithField("step_run_id", stepRun.ID).Error("Failed to update step run with error")
 		}
+
+		// Broadcast step failed event
+		e.broadcastStepEvent("step_completed", flowRunID, stepName, "FAILED", map[string]interface{}{
+			"stepType": stepType,
+		}, err.Error(), time.Since(startTime).Milliseconds())
+
 		return nil, err
 	}
 
 	// Mark step as succeeded
 	if err := e.completeStepRun(ctx, stepRun.ID, output, "SUCCEEDED"); err != nil {
+		// Broadcast step failed event
+		e.broadcastStepEvent("step_completed", flowRunID, stepName, "FAILED", map[string]interface{}{
+			"stepType": stepType,
+		}, fmt.Sprintf("Failed to complete step run: %v", err), time.Since(startTime).Milliseconds())
 		return nil, fmt.Errorf("failed to complete step run for '%s': %w", stepName, err)
 	}
+
+	// Broadcast step completed event with output data
+	e.broadcastStepEvent("step_completed", flowRunID, stepName, "SUCCEEDED", map[string]interface{}{
+		"stepType": stepType,
+		"output":   output,
+	}, "", time.Since(startTime).Milliseconds())
 
 	return output, nil
 }
@@ -286,15 +342,93 @@ func (e *ExecutionEngine) executeHTTPStep(ctx context.Context, stepName string, 
 		"step_data": stepData,
 	}).Info("Executing HTTP step")
 
-	// This is a placeholder implementation
-	// In a real implementation, you would make actual HTTP requests
+	// Extract HTTP configuration from step data
+	var httpConfig map[string]interface{}
+	if settings, ok := stepData["settings"].(map[string]interface{}); ok {
+		httpConfig = settings
+	} else {
+		httpConfig = stepData
+	}
+
+	// Extract URL (required)
+	url, ok := httpConfig["url"].(string)
+	if !ok || url == "" {
+		return nil, fmt.Errorf("URL is required for HTTP step")
+	}
+
+	// Extract method (optional, default to GET)
+	method := "GET"
+	if m, ok := httpConfig["method"].(string); ok && m != "" {
+		method = m
+	}
+
+	// Extract timeout (optional, default to 10 seconds)
+	timeout := 10 * time.Second
+	if t, ok := httpConfig["timeout"].(float64); ok && t > 0 {
+		timeout = time.Duration(t) * time.Second
+	}
+
+	//Implement HTTP step
+	// Use a proxy to make the request to the external service
+
+	httpClient := &http.Client{
+		Timeout: timeout,
+	}
+
+	// Extract request body (optional)
+	var requestBody io.Reader
+	if body, ok := httpConfig["body"].(string); ok && body != "" {
+		requestBody = strings.NewReader(body)
+	}
+
+	request, err := http.NewRequestWithContext(ctx, method, url, requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Add headers (optional)
+	if headers, ok := httpConfig["headers"].(map[string]interface{}); ok {
+		for key, value := range headers {
+			if strValue, ok := value.(string); ok {
+				request.Header.Set(key, strValue)
+			}
+		}
+	}
+
+	// Set default Content-Type if body is provided and no Content-Type is set
+	if requestBody != nil && request.Header.Get("Content-Type") == "" {
+		request.Header.Set("Content-Type", "application/json")
+	}
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
+	}
+
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read HTTP response body: %w", err)
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name":     stepName,
+		"step_type":     "http",
+		"method":        method,
+		"url":           url,
+		"status_code":   response.StatusCode,
+		"response_body": string(body),
+	}).Info("HTTP request executed successfully")
+
 	return map[string]interface{}{
-		"executed_at": time.Now().Format(time.RFC3339),
-		"step_type":   "http",
-		"url":         stepData["url"],
-		"method":      stepData["method"],
-		"status_code": 200,
-		"response":    "HTTP request executed successfully (placeholder)",
+		"executed_at":   time.Now().Format(time.RFC3339),
+		"step_type":     "http",
+		"method":        method,
+		"url":           url,
+		"status_code":   response.StatusCode,
+		"response_body": string(body),
+		"headers":       response.Header,
 	}, nil
 }
 
@@ -386,6 +520,14 @@ func (e *ExecutionEngine) executeActionStep(ctx context.Context, stepName string
 		return e.executeLogStep(ctx, stepName, stepData, context)
 	case "email", "email-piece":
 		return e.executeEmailStep(ctx, stepName, stepData, context)
+	case "if-else", "condition":
+		return e.executeIfElseStep(ctx, stepName, stepData, context)
+	case "loop", "while":
+		return e.executeLoopStep(ctx, stepName, stepData, context)
+	case "for-each", "iterate":
+		return e.executeForEachStep(ctx, stepName, stepData, context)
+	case "switch", "router":
+		return e.executeSwitchStep(ctx, stepName, stepData, context)
 	default:
 		// Generic action execution
 		return map[string]interface{}{
@@ -395,6 +537,288 @@ func (e *ExecutionEngine) executeActionStep(ctx context.Context, stepName string
 			"message":     fmt.Sprintf("Action step '%s' of type '%s' executed (placeholder)", stepName, actionType),
 		}, nil
 	}
+}
+
+// Conditional step execution methods
+func (e *ExecutionEngine) executeIfElseStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "if-else",
+		"step_data": stepData,
+	}).Info("Executing if-else step")
+
+	// Extract configuration from step data
+	var config map[string]interface{}
+	if settings, ok := stepData["settings"].(map[string]interface{}); ok {
+		config = settings
+	} else {
+		config = stepData
+	}
+
+	// Get condition
+	condition, ok := config["condition"].(string)
+	if !ok || condition == "" {
+		return nil, fmt.Errorf("condition is required for if-else step")
+	}
+
+	// Evaluate condition (placeholder implementation - in real scenario, you'd use an expression evaluator)
+	result := e.evaluateCondition(condition, context)
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"condition": condition,
+		"result":    result,
+	}).Info("If-else condition evaluated")
+
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "if-else",
+		"condition":   condition,
+		"result":      result,
+		"branch":      map[string]interface{}{"condition_met": result},
+		"message":     fmt.Sprintf("If-else condition '%s' evaluated to %v", condition, result),
+	}, nil
+}
+
+func (e *ExecutionEngine) executeLoopStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "loop",
+		"step_data": stepData,
+	}).Info("Executing loop step")
+
+	// Extract configuration from step data
+	var config map[string]interface{}
+	if settings, ok := stepData["settings"].(map[string]interface{}); ok {
+		config = settings
+	} else {
+		config = stepData
+	}
+
+	// Get loop condition and max iterations
+	condition, ok := config["condition"].(string)
+	if !ok || condition == "" {
+		return nil, fmt.Errorf("condition is required for loop step")
+	}
+
+	maxIterations := 10 // Default
+	if max, ok := config["maxIterations"].(float64); ok {
+		maxIterations = int(max)
+	}
+	if maxIterations > 1000 {
+		maxIterations = 1000 // Safety limit
+	}
+
+	// Execute loop
+	var iterations []map[string]interface{}
+	iteration := 0
+
+	for iteration < maxIterations {
+		// Check condition
+		if !e.evaluateCondition(condition, context) {
+			break
+		}
+
+		iteration++
+		iterationResult := map[string]interface{}{
+			"iteration": iteration,
+			"timestamp": time.Now().Format(time.RFC3339),
+			"context":   context,
+		}
+		iterations = append(iterations, iterationResult)
+
+		// Update context for next iteration (placeholder)
+		context["iteration"] = iteration
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name":  stepName,
+		"condition":  condition,
+		"iterations": iteration,
+	}).Info("Loop step completed")
+
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "loop",
+		"condition":   condition,
+		"iterations":  iterations,
+		"total_count": iteration,
+		"message":     fmt.Sprintf("Loop executed %d iterations", iteration),
+	}, nil
+}
+
+func (e *ExecutionEngine) executeForEachStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "for-each",
+		"step_data": stepData,
+	}).Info("Executing for-each step")
+
+	// Extract configuration from step data
+	var config map[string]interface{}
+	if settings, ok := stepData["settings"].(map[string]interface{}); ok {
+		config = settings
+	} else {
+		config = stepData
+	}
+
+	// Get items to iterate over
+	var items []interface{}
+	if itemsArray, ok := config["items"].([]interface{}); ok {
+		items = itemsArray
+	} else if itemsExpression, ok := config["itemsExpression"].(string); ok {
+		// In a real implementation, you'd evaluate the expression to get the items
+		// For now, use a placeholder
+		items = []interface{}{"item1", "item2", "item3"}
+		e.logger.WithField("expression", itemsExpression).Debug("Using placeholder items for expression")
+	} else {
+		return nil, fmt.Errorf("items or itemsExpression is required for for-each step")
+	}
+
+	// Execute for each item
+	var results []map[string]interface{}
+	for index, item := range items {
+		itemContext := make(map[string]interface{})
+		for k, v := range context {
+			itemContext[k] = v
+		}
+		itemContext["item"] = item
+		itemContext["index"] = index
+
+		itemResult := map[string]interface{}{
+			"index":     index,
+			"item":      item,
+			"timestamp": time.Now().Format(time.RFC3339),
+			"context":   itemContext,
+		}
+		results = append(results, itemResult)
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name":  stepName,
+		"item_count": len(items),
+	}).Info("For-each step completed")
+
+	return map[string]interface{}{
+		"executed_at": time.Now().Format(time.RFC3339),
+		"step_type":   "for-each",
+		"items":       items,
+		"results":     results,
+		"total_count": len(items),
+		"message":     fmt.Sprintf("For-each processed %d items", len(items)),
+	}, nil
+}
+
+func (e *ExecutionEngine) executeSwitchStep(ctx context.Context, stepName string, stepData map[string]interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	e.logger.WithFields(map[string]interface{}{
+		"step_name": stepName,
+		"step_type": "switch",
+		"step_data": stepData,
+	}).Info("Executing switch step")
+
+	// Extract configuration from step data
+	var config map[string]interface{}
+	if settings, ok := stepData["settings"].(map[string]interface{}); ok {
+		config = settings
+	} else {
+		config = stepData
+	}
+
+	// Get switch expression
+	expression, ok := config["expression"].(string)
+	if !ok || expression == "" {
+		return nil, fmt.Errorf("expression is required for switch step")
+	}
+
+	// Get cases
+	cases, ok := config["cases"].([]interface{})
+	if !ok || len(cases) == 0 {
+		return nil, fmt.Errorf("cases are required for switch step")
+	}
+
+	// Evaluate expression (placeholder implementation)
+	value := e.evaluateExpression(expression, context)
+
+	// Find matching case
+	var matchedCase map[string]interface{}
+	var defaultCase map[string]interface{}
+
+	for _, caseItem := range cases {
+		if caseMap, ok := caseItem.(map[string]interface{}); ok {
+			if caseValue, exists := caseMap["value"]; exists {
+				if caseValue == value {
+					matchedCase = caseMap
+					break
+				}
+			} else if isDefault, ok := caseMap["default"].(bool); ok && isDefault {
+				defaultCase = caseMap
+			}
+		}
+	}
+
+	// Use matched case or default case
+	selectedCase := matchedCase
+	if selectedCase == nil {
+		selectedCase = defaultCase
+	}
+
+	var caseResult interface{} = "no_match"
+	if selectedCase != nil {
+		caseResult = selectedCase["value"]
+		if caseResult == nil {
+			caseResult = "default"
+		}
+	}
+
+	e.logger.WithFields(map[string]interface{}{
+		"step_name":       stepName,
+		"expression":      expression,
+		"evaluated_value": value,
+		"matched_case":    caseResult,
+	}).Info("Switch step completed")
+
+	return map[string]interface{}{
+		"executed_at":     time.Now().Format(time.RFC3339),
+		"step_type":       "switch",
+		"expression":      expression,
+		"evaluated_value": value,
+		"matched_case":    caseResult,
+		"all_cases":       cases,
+		"message":         fmt.Sprintf("Switch expression '%s' evaluated to '%v', matched case: %v", expression, value, caseResult),
+	}, nil
+}
+
+// Helper methods for condition and expression evaluation
+func (e *ExecutionEngine) evaluateCondition(condition string, context map[string]interface{}) bool {
+	// Placeholder implementation - in a real scenario, you'd use a proper expression evaluator
+	// For now, handle some simple cases
+	switch condition {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	default:
+		// Try to find the condition in context
+		if value, exists := context[condition]; exists {
+			if boolValue, ok := value.(bool); ok {
+				return boolValue
+			}
+			// Convert other types to boolean
+			return value != nil && value != "" && value != 0
+		}
+		// Default to true for placeholder
+		return true
+	}
+}
+
+func (e *ExecutionEngine) evaluateExpression(expression string, context map[string]interface{}) interface{} {
+	// Placeholder implementation - in a real scenario, you'd use a proper expression evaluator
+	// Check if expression exists in context
+	if value, exists := context[expression]; exists {
+		return value
+	}
+	// Return the expression itself as a fallback
+	return expression
 }
 
 // Database helper methods

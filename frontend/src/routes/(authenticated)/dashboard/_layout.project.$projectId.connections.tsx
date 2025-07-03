@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Settings, Trash2, Zap } from "lucide-react";
+import { projectService } from "@/services/project-service";
 
 export const Route = createFileRoute("/(authenticated)/dashboard/_layout/project/$projectId/connections")({
 	component: ProjectConnectionsPage,
@@ -12,9 +13,14 @@ export const Route = createFileRoute("/(authenticated)/dashboard/_layout/project
 		
 		try {
 			// TODO: Implement actual connections service
-			const appConnections = [];
+			const appConnections: any[] = [];
+			const project = await context.queryClient.fetchQuery({
+				queryKey: ["project", projectId],
+				queryFn: () => projectService.getProject(projectId)
+			});
 			
 			return { 
+				project,
 				projectId,
 				appConnections: appConnections || [],
 				loading: false 
@@ -22,6 +28,7 @@ export const Route = createFileRoute("/(authenticated)/dashboard/_layout/project
 		} catch (error) {
 			console.error("Project connections loader error:", error);
 			return { 
+				
 				projectId,
 				appConnections: [],
 				loading: false,
@@ -32,8 +39,7 @@ export const Route = createFileRoute("/(authenticated)/dashboard/_layout/project
 });
 
 function ProjectConnectionsPage() {
-	const { projectId, appConnections, loading, error } = Route.useLoaderData();
-	const { project } = Route.useRouteContext({ from: "/(authenticated)/dashboard/_layout/project/$projectId" });
+	const { projectId, appConnections, loading, error, project } = Route.useLoaderData();
 
 	if (error) {
 		return (
